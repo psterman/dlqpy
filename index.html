@@ -21,20 +21,50 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 50px;
         }
 
         .image-card {
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 10px;
-            max-width: 100%;
+            padding: 15px;
+            max-width: 90%;
+            margin: 0 auto;
         }
 
         .image-card img {
             max-width: 100%;
             border-radius: 4px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background-color: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .pagination button:hover {
+            background-color: #f0f0f0;
+        }
+
+        .pagination button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            margin: 0 15px;
         }
     </style>
     <script>
@@ -421,13 +451,19 @@
             "pic/008HL3Tkly1hylvae6uo6j31kw0pmq6p.jpg"
         ];
 
+        let currentPage = 1;
+        const imagesPerPage = 10;
         let shuffledImagePaths = _.shuffle(imagePaths);
-        let currentIndex = 0;
 
-        function displayImages() {
+        function displayImages(page) {
             const imageList = document.getElementById("image-list");
+            imageList.innerHTML = ''; // 清空当前显示的图片
 
-            for (let i = 0; i < 5 && currentIndex < shuffledImagePaths.length; i++) {
+            const startIndex = (page - 1) * imagesPerPage;
+            const endIndex = startIndex + imagesPerPage;
+            const currentImages = shuffledImagePaths.slice(startIndex, endIndex);
+
+            currentImages.forEach(imagePath => {
                 const imageContainer = document.createElement("div");
                 imageContainer.classList.add("image-container");
 
@@ -435,34 +471,48 @@
                 imageCard.classList.add("image-card");
 
                 const imageElement = document.createElement("img");
-                imageElement.src = shuffledImagePaths[currentIndex];
+                imageElement.src = imagePath;
                 imageElement.alt = "Meme Image";
+                imageElement.style.width = "100%";
                 imageCard.appendChild(imageElement);
 
                 imageContainer.appendChild(imageCard);
                 imageList.appendChild(imageContainer);
-                currentIndex++;
-            }
+            });
 
-            if (currentIndex < shuffledImagePaths.length) {
-                setTimeout(displayImages, 1000); // 延迟1秒加载下一批图片
-            } else {
-                // 所有图片加载完毕后重新随机排序
-                shuffledImagePaths = _.shuffle(imagePaths);
-                currentIndex = 0;
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(shuffledImagePaths.length / imagesPerPage);
+            const paginationContainer = document.getElementById("pagination");
+            paginationContainer.innerHTML = `
+                <button onclick="prevPage()" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
+                <span class="page-info">第 ${currentPage} 页 / 共 ${totalPages} 页</span>
+                <button onclick="nextPage()" ${currentPage === totalPages ? 'disabled' : ''}>下一页</button>
+            `;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayImages(currentPage);
+                window.scrollTo(0, 0); // 回到顶部
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(shuffledImagePaths.length / imagesPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayImages(currentPage);
+                window.scrollTo(0, 0); // 回到顶部
             }
         }
 
         window.onload = function () {
-            displayImages();
+            displayImages(currentPage);
         };
-
-        window.addEventListener("scroll", function () {
-            const { scrollTop, clientHeight, scrollHeight } = document.documentElement;
-            if (scrollTop + clientHeight >= scrollHeight - 20) {
-                displayImages();
-            }
-        });
 
         // 配置微信分享
         wx.config({
@@ -490,6 +540,7 @@
 
 <body>
     <div id="image-list"></div>
+    <div id="pagination" class="pagination"></div>
     <img id="meme-image" src="" alt="Meme Image">
     <button onclick="displayNextImage()">下一张</button>
     <button class="like-button" onclick="toggleLike(this)">

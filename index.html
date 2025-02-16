@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>匿名梗图网站</title>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+  <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.6.1/dist/av-min.js"></script>
+  <style>
+    .like-button {
+      /* 点赞按钮样式 */
+    }
+    .liked {
+      /* 点赞后的样式 */
+    }
+    .image-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .image-card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      max-width: 100%;
+    }
+    .image-card img {
+      max-width: 100%;
+      border-radius: 4px;
+    }
+  </style>
+  <script>
+    const imagePaths = [
+      // 在这里添加所有图片的路径
+      "pic/001pej9Ry1hyvsefcjojj20u01hcqv5.jpg",
+      "pic/001VouXPgy1h001VouXPgy1hygi8idj6bv1is79402.jpg",
+      "pic/001VouXPgy1hygi6ll4vqg60u02i5kjm02.gif",
+      // ...
+    ];
+
+    let shuffledImagePaths = _.shuffle(imagePaths);
+    let currentIndex = 0;
+
+    function displayImages() {
+      const imageList = document.getElementById("image-list");
+
+      for (let i = 0; i < 5 && currentIndex < shuffledImagePaths.length; i++) {
+        const imageContainer = document.createElement("div");
+        imageContainer.classList.add("image-container");
+
+        const imageCard = document.createElement("div");
+        imageCard.classList.add("image-card");
+
+        const imageElement = document.createElement("img");
+        imageElement.src = shuffledImagePaths[currentIndex];
+        imageElement.alt = "Meme Image";
+        imageCard.appendChild(imageElement);
+
+        imageContainer.appendChild(imageCard);
+        imageList.appendChild(imageContainer);
+        currentIndex++;
+      }
+
+      if (currentIndex < shuffledImagePaths.length) {
+        setTimeout(displayImages, 1000); // 延迟1秒加载下一批图片
+      } else {
+        // 所有图片加载完毕后重新随机排序
+        shuffledImagePaths = _.shuffle(imagePaths);
+        currentIndex = 0;
+      }
+    }
+
+    window.onload = function() {
+      displayImages();
+    };
+
+    window.addEventListener("scroll", function() {
+      const { scrollTop, clientHeight, scrollHeight } = document.documentElement;
+      if (scrollTop + clientHeight >= scrollHeight - 20) {
+        displayImages();
+      }
+    });
+
+    // 配置微信分享
+    wx.config({
+      debug: false,
+      appId: 'YOUR_APP_ID',
+      timestamp: 'YOUR_TIMESTAMP',
+      nonceStr: 'YOUR_NONCE_STR',
+      signature: 'YOUR_SIGNATURE',
+      jsApiList: ['updateAppMessageShareData', 'updateTimelineShareData']
+    });
+
+    // 设置分享内容
+    wx.ready(function () {
+      var shareData = {
+        title: '匿名梗图网站',
+        desc: '24小时随机不重复浏览有趣的梗图,快来看看吧!',
+        link: window.location.href,
+        imgUrl: document.getElementById('meme-image').src
+      };
+      wx.updateAppMessageShareData(shareData);
+      wx.updateTimelineShareData(shareData);
+    });
+  </script>
+</head>
+<body>
+  <div id="image-list"></div>
+  <img id="meme-image" src="" alt="Meme Image">
+  <button onclick="displayNextImage()">下一张</button>
+  <button class="like-button" onclick="toggleLike(this)">
+    <span class="like-count">0</span> 点赞
+  </button>
+  <div id="disqus_thread"></div>
+  <div id="gitalk-container"></div>
+  <script>
+    var disqus_config = function () {
+      this.page.url = window.location.href;  // 当前页面的 URL
+      this.page.identifier = window.location.pathname;  // 当前页面的标识符
+    };
+    (function() { // DON'T EDIT BELOW THIS LINE
+      var d = document, s = d.createElement('script');
+      s.src = 'https://your-disqus-shortname.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', +new Date());
+      (d.head || d.body).appendChild(s);
+    })();
+  </script>
+  <script>
+    // 初始化 LeanCloud
+    AV.init({
+      appId: 'YOUR_LEANCLOUD_APP_ID',
+      appKey: 'YOUR_LEANCLOUD_APP_KEY'
+    });
+
+    // 获取点赞数
+    function getLikeCount() {
+      const query = new AV.Query('Like');
+      return query.count();
+    }
+
+    // 更新点赞数
+    function updateLikeCount() {
+      getLikeCount().then(count => {
+        document.querySelector('.like-count').innerText = count;
+      });
+    }
+
+    // 点赞或取消点赞
+    function toggleLike(button) {
+      if (button.classList.contains('liked')) {
+        // 取消点赞
+        const query = new AV.Query('Like');
+        query.first().then(like => {
+          like.destroy().then(() => {
+            button.classList.remove('liked');
+            updateLikeCount();
+          });
+        });
+      } else {
+        // 点赞
+        const Like = AV.Object.extend('Like');
+        const like = new Like();
+        like.save().then(() => {
+          button.classList.add('liked');
+          updateLikeCount();
+        });
+      }
+    }
+
+    // 初始化点赞数
+    updateLikeCount();
+  </script>
+  <script>
+    const gitalk = new Gitalk({
+      clientID: 'YOUR_GITHUB_APP_CLIENT_ID',
+      clientSecret: 'YOUR_GITHUB_APP_CLIENT_SECRET',
+      repo: 'YOUR_GITHUB_REPO',
+      owner: 'YOUR_GITHUB_USERNAME',
+      admin: ['YOUR_GITHUB_USERNAME'],
+      id: location.pathname,
+      distractionFreeMode: false
+    });
+    gitalk.render('gitalk-container');
+  </script>
+</body>
+</html> 

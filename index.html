@@ -729,10 +729,63 @@
             }, 300);
         }
 
+        // PreloadManager 类定义移到这里，在使用之前
+        class PreloadManager {
+            constructor(imagePaths) {
+                this.imagePaths = imagePaths;
+                this.preloadedImages = new Map();
+                this.currentIndex = 0;
+                this.preloadSize = 3;
+            }
+
+            preloadNext() {
+                const loadingOverlay = showLoading();
+                const promises = [];
+
+                for (let i = 0; i < this.preloadSize; i++) {
+                    const index = (this.currentIndex + i) % this.imagePaths.length;
+                    const path = this.imagePaths[index];
+                    if (!this.preloadedImages.has(path)) {
+                        const promise = new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.onload = () => resolve(img);
+                            img.onerror = reject;
+                            img.src = path;
+                            this.preloadedImages.set(path, img);
+                        });
+                        promises.push(promise);
+                    }
+                }
+
+                Promise.all(promises)
+                    .then(() => hideLoading(loadingOverlay))
+                    .catch(() => hideLoading(loadingOverlay));
+            }
+
+            getImage(path) {
+                return this.preloadedImages.get(path) || null;
+            }
+
+            advance() {
+                this.currentIndex = (this.currentIndex + 1) % this.imagePaths.length;
+                this.preloadNext();
+            }
+        }
+
         // 初始化预加载管理器
         window.addEventListener('DOMContentLoaded', () => {
             preloadManager = new PreloadManager(shuffledImagePaths);
             preloadManager.preloadNext();
+
+            // 主题设置初始化也放在这里
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            const themeToggle = document.createElement('button');
+            themeToggle.classList.add('theme-toggle');
+            themeToggle.textContent = savedTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
+            themeToggle.onclick = toggleTheme;
+            document.body.appendChild(themeToggle);
         });
 
         function displayImages(page) {
@@ -872,18 +925,6 @@
             const themeToggle = document.querySelector('.theme-toggle');
             themeToggle.textContent = newTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
         }
-
-        // 在页面加载时检查并应用保存的主题设置
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-
-            const themeToggle = document.createElement('button');
-            themeToggle.classList.add('theme-toggle');
-            themeToggle.textContent = savedTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
-            themeToggle.onclick = toggleTheme;
-            document.body.appendChild(themeToggle);
-        });
 
         window.onload = function () {
             displayImages(currentPage);

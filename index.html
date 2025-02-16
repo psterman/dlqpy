@@ -5,6 +5,49 @@
     <title>大佬请批阅</title>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --card-bg: #fff;
+            --text-color: #666;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --counter-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --counter-bg: rgba(45, 45, 45, 0.9);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            transition: background-color 0.3s ease;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--counter-bg);
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            z-index: 1000;
+            font-size: 16px;
+            border: none;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+        }
+
         .image-container {
             display: flex;
             align-items: center;
@@ -15,6 +58,8 @@
             cursor: grab;
             width: 90%;
             max-width: 800px;
+            background-color: var(--card-bg);
+            perspective: 1000px;
         }
 
         .image-container:active {
@@ -22,17 +67,29 @@
         }
 
         .image-card {
-            background-color: #fff;
+            background-color: var(--card-bg);
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px var(--shadow-color);
             padding: 15px;
             width: 100%;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(0);
             will-change: transform;
+            transition: background-color 0.3s ease;
+            position: relative;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
         }
 
         .image-card.sliding {
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .image-card.sliding-right {
+            animation: slideOutRight 0.3s forwards;
+        }
+
+        .image-card.sliding-left {
+            animation: slideOutLeft 0.3s forwards;
         }
 
         .image-card img {
@@ -42,37 +99,109 @@
 
         .swipe-hint {
             position: absolute;
-            color: #666;
-            font-size: 18px;
-            padding: 15px;
-            opacity: 0.8;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--text-color);
+            font-size: 16px;
+            padding: 10px 20px;
+            background-color: var(--counter-bg);
+            border-radius: 20px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            white-space: nowrap;
             pointer-events: none;
-        }
-
-        .swipe-hint-left {
-            left: -80px;
-        }
-
-        .swipe-hint-right {
-            right: -80px;
+            display: flex;
+            gap: 20px;
         }
 
         .funny-counter {
             position: fixed;
             top: 20px;
             left: 20px;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: var(--counter-bg);
             padding: 10px 15px;
             border-radius: 20px;
             font-size: 16px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            color: #666;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            color: var(--text-color);
         }
 
         .funny-counter .count {
             color: #ff6b6b;
             font-weight: bold;
             margin-left: 5px;
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes slideOutLeft {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(-120%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes slideInNext {
+            from {
+                transform: translateX(100%) scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-text {
+            color: var(--text-color);
+            font-size: 18px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--counter-bg);
+            border-top-color: #ff6b6b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
     <script>
@@ -444,7 +573,7 @@
             "pic/008HL3Tkly1hylv7svooej30p80xc41h.jpg",
             "pic/008HL3Tkly1hylv7z2kqyj30g00zkq5h.jpg",
             "pic/008HL3Tkly1hylv857432j307r0kujsp.jpg",
-            "pic/008HL3Tkly1hylv8bj7t5j30u01330vd.jpg",
+            "pic/008HL3Tkly1hylv8bj7t5j30eb0n0dmc.jpg",
             "pic/008HL3Tkly1hylv8hp8g4j30eb0n0dmc.jpg",
             "pic/008HL3Tkly1hylv8o5lwuj30wn15utyt.jpg",
             "pic/008HL3Tkly1hylv8uabqwj30hm0iwq4g.jpg",
@@ -466,6 +595,145 @@
         let startX = 0;
         let currentX = 0;
         let funnyCount = 0;
+        let preloadManager;
+
+        // 添加文案数组
+        const dislikeTexts = [
+            "朕已阅", "退下吧", "不准奏", "无趣", "枯燥",
+            "乏味", "朕不悦", "荒谬", "胡闹", "放肆",
+            "大胆", "荒唐", "糊涂", "不知所谓", "岂有此理",
+            "朕累了", "朕乏了", "朕倦了", "下一个", "不值一看",
+            "休得胡言", "简直可笑", "无稽之谈", "朕不想看", "太过无聊",
+            "难登大雅", "不知天高地厚", "不知分寸", "太过草率", "朕看不下去了",
+            "有辱斯文", "贻笑大方", "不知检点", "不堪入目", "朕甚失望",
+            "不知悔改", "不知进退", "不知轻重", "不知好歹", "不知羞耻",
+            "朕心烦了", "朕不准", "朕不许", "朕不要", "着实无趣",
+            "甚是无味", "令朕生厌", "令朕不快", "令朕反感", "令朕作呕"
+        ];
+
+        const likeTexts = [
+            "龙颜大悦", "准奏", "甚好", "不错", "有趣",
+            "妙哉", "爱卿说得好", "朕很欣慰", "可", "准",
+            "御笔亲批", "朕准了", "甚妙", "妙不可言", "深得朕心",
+            "朕很满意", "善", "极好", "朕笑了", "卿家有才",
+            "果然精彩", "深得朕意", "朕甚欢喜", "妙笔生花", "才思敏捷",
+            "朕要重赏", "卿家妙极", "真乃大才", "朕要多看几遍", "传朕旨意",
+            "朕龙心大悦", "妙不可言", "绝妙好辞", "朕准了", "甚合朕意",
+            "爱卿用心了", "朕很喜欢", "可圈可点", "令朕开怀", "妙趣横生",
+            "朕要赏赐", "朕要嘉奖", "朕要褒奖", "朕要表彰", "朕要夸赞",
+            "朕心甚悦", "朕意甚慰", "朕心大快", "朕意大畅", "朕心舒畅"
+        ];
+
+        // 添加已使用文案追踪
+        let usedDislikeTexts = new Set();
+        let usedLikeTexts = new Set();
+
+        function getRandomText(isLike) {
+            const texts = isLike ? likeTexts : dislikeTexts;
+            const usedTexts = isLike ? usedLikeTexts : usedDislikeTexts;
+
+            // 如果所有文案都用过了，清空已使用记录
+            if (usedTexts.size >= texts.length) {
+                usedTexts.clear();
+            }
+
+            // 从未使用的文案中随机选择
+            let availableTexts = texts.filter(text => !usedTexts.has(text));
+            let selectedText = availableTexts[Math.floor(Math.random() * availableTexts.length)];
+
+            // 记录已使用的文案
+            usedTexts.add(selectedText);
+
+            return selectedText;
+        }
+
+        // 添加加载时的舔狗文案
+        const loadingTexts = [
+            "奴才正在为皇上准备奏折...",
+            "小的正在整理御览资料...",
+            "奴才斗胆为陛下筛选...",
+            "恳请圣上稍候片刻...",
+            "奴才正在诚惶诚恐地准备...",
+            "容奴才为陛下精选...",
+            "奴才正在战战兢兢地整理...",
+            "请容奴才为圣上过目...",
+            "奴才正在为万岁爷准备...",
+            "小的不敢怠慢，马上呈上...",
+            "奴才正在用心准备...",
+            "恳请陛下稍作休息...",
+            "奴才正在为圣上效劳...",
+            "容奴才为陛下筛选精品...",
+            "小的正在竭尽全力准备...",
+            "奴才正在为皇上精心挑选...",
+            "请容奴才再做细选...",
+            "万岁爷请稍候，马上呈上...",
+            "奴才正在为陛下忙碌...",
+            "小的不敢懈怠，即刻呈递...",
+            "恳请圣上稍作歇息...",
+            "奴才正在为陛下效命...",
+            "容小的为皇上准备...",
+            "奴才正在为万岁爷甄选...",
+            "请容奴才为圣上整理...",
+            "小的正在为陛下忙活...",
+            "奴才正在为皇上筛选...",
+            "恳请万岁爷稍等片刻...",
+            "奴才正在为圣上准备...",
+            "容小的为陛下效劳...",
+            "奴才正在为皇上整理...",
+            "请容奴才为万岁爷准备...",
+            "小的正在为圣上筛选...",
+            "奴才正在为陛下甄选...",
+            "恳请皇上稍作休息...",
+            "奴才正在为圣上忙碌...",
+            "容小的为万岁爷效劳...",
+            "奴才正在为陛下准备...",
+            "请容奴才为皇上整理...",
+            "小的正在为圣上效命...",
+            "奴才正在为万岁爷筛选...",
+            "恳请陛下稍候片刻...",
+            "奴才正在为皇上甄选...",
+            "容小的为圣上效劳...",
+            "奴才正在为陛下整理...",
+            "请容奴才为万岁爷准备...",
+            "小的正在为圣上筛选...",
+            "奴才正在为皇上效命...",
+            "恳请万岁爷稍等片刻...",
+            "奴才正在为陛下忙活..."
+        ];
+
+        // 显示加载动画
+        function showLoading() {
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.classList.add('loading-overlay');
+
+            const spinner = document.createElement('div');
+            spinner.classList.add('loading-spinner');
+
+            const loadingText = document.createElement('div');
+            loadingText.classList.add('loading-text');
+            loadingText.textContent = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
+
+            loadingOverlay.appendChild(spinner);
+            loadingOverlay.appendChild(loadingText);
+            document.body.appendChild(loadingOverlay);
+
+            return loadingOverlay;
+        }
+
+        // 隐藏加载动画
+        function hideLoading(loadingOverlay) {
+            loadingOverlay.style.opacity = '0';
+            loadingOverlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+                loadingOverlay.remove();
+            }, 300);
+        }
+
+        // 初始化预加载管理器
+        window.addEventListener('DOMContentLoaded', () => {
+            preloadManager = new PreloadManager(shuffledImagePaths);
+            preloadManager.preloadNext();
+        });
 
         function displayImages(page) {
             const imageList = document.getElementById("image-list");
@@ -481,25 +749,22 @@
             imageCard.classList.add("image-card");
 
             const imageElement = document.createElement("img");
-            imageElement.src = currentImage;
+            // 使用预加载的图片
+            const preloadedImage = preloadManager.getImage(currentImage);
+            imageElement.src = preloadedImage ? preloadedImage.src : currentImage;
             imageElement.alt = "Meme Image";
             imageElement.style.width = "100%";
             imageElement.draggable = false;
+            imageElement.style.animation = 'slideInNext 0.3s forwards';
             imageCard.appendChild(imageElement);
 
-            // 添加左侧提示
-            const leftHint = document.createElement("div");
-            leftHint.classList.add("swipe-hint", "swipe-hint-left");
-            leftHint.textContent = "左滑不好笑 😭";
+            // 修改底部提示文案
+            const swipeHint = document.createElement("div");
+            swipeHint.classList.add("swipe-hint");
+            swipeHint.innerHTML = `<span>👈 ${getRandomText(false)}</span><span>${getRandomText(true)} 👉</span>`;
 
-            // 添加右侧提示
-            const rightHint = document.createElement("div");
-            rightHint.classList.add("swipe-hint", "swipe-hint-right");
-            rightHint.textContent = "右滑好笑 👍";
-
-            imageContainer.appendChild(leftHint);
             imageContainer.appendChild(imageCard);
-            imageContainer.appendChild(rightHint);
+            imageContainer.appendChild(swipeHint);
 
             // 添加好笑计数器
             const funnyCounter = document.createElement("div");
@@ -538,9 +803,7 @@
             const diff = currentX - startX;
             const imageCard = event.currentTarget.querySelector('.image-card');
 
-            requestAnimationFrame(() => {
-                imageCard.style.transform = `translateX(${diff}px)`;
-            });
+            imageCard.style.transform = `translateX(${diff}px)`;
         }
 
         function handleEnd(event) {
@@ -550,13 +813,12 @@
             }
 
             const diff = currentX - startX;
-            const threshold = window.innerWidth * 0.2;
+            const threshold = window.innerWidth * 0.15;
             const imageCard = event.currentTarget.querySelector('.image-card');
 
             if (Math.abs(diff) > threshold) {
                 imageCard.classList.add('sliding');
-                const direction = diff > 0 ? 1 : -1;
-                imageCard.style.transform = `translateX(${direction * window.innerWidth}px)`;
+                imageCard.classList.add(diff > 0 ? 'sliding-right' : 'sliding-left');
 
                 setTimeout(() => {
                     if (diff > 0) {
@@ -570,7 +832,7 @@
                 imageCard.style.transform = 'translateX(0)';
                 setTimeout(() => {
                     imageCard.classList.remove('sliding');
-                }, 300);
+                }, 200);
             }
         }
 
@@ -579,20 +841,49 @@
             if (currentPage < totalImages) {
                 if (liked) {
                     funnyCount++;
-                    console.log('用户觉得好笑');
+                    console.log(getRandomText(true));
                 } else {
-                    console.log('用户觉得不好笑');
+                    console.log(getRandomText(false));
                 }
 
                 currentPage++;
+                preloadManager.advance();
                 displayImages(currentPage);
             } else {
                 shuffledImagePaths = _.shuffle(imagePaths);
                 currentPage = 1;
-                funnyCount = 0; // 重置好笑计数
+                funnyCount = 0;
+                preloadManager = new PreloadManager(shuffledImagePaths);
+                preloadManager.preloadNext();
                 displayImages(currentPage);
             }
         }
+
+        // 添加主题切换功能
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+
+            // 保存主题设置到本地存储
+            localStorage.setItem('theme', newTheme);
+
+            // 更新按钮文字
+            const themeToggle = document.querySelector('.theme-toggle');
+            themeToggle.textContent = newTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
+        }
+
+        // 在页面加载时检查并应用保存的主题设置
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+
+            const themeToggle = document.createElement('button');
+            themeToggle.classList.add('theme-toggle');
+            themeToggle.textContent = savedTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
+            themeToggle.onclick = toggleTheme;
+            document.body.appendChild(themeToggle);
+        });
 
         window.onload = function () {
             displayImages(currentPage);

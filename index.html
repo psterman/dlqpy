@@ -451,7 +451,56 @@
         // 添加左右滑动处理
         let startX = 0;
         let currentX = 0;
-        let isMouseDown = false;  // 添加鼠标按下状态标记
+        let isMouseDown = false;
+
+        // 添加键盘事件监听
+        document.addEventListener('keydown', handleKeyPress);
+
+        function handleKeyPress(e) {
+            const card = document.querySelector('.image-card');
+            if (!card) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    // 左箭头：不喜欢
+                    animateSwipe(card, -1, () => {
+                        currentIndex++;
+                        showImage(currentIndex);
+                        checkAndResetImages();
+                    });
+                    break;
+                case 'ArrowRight':
+                    // 右箭头：喜欢
+                    animateSwipe(card, 1, () => {
+                        currentIndex++;
+                        funnyCount++;
+                        showImage(currentIndex);
+                        checkAndResetImages();
+                    });
+                    break;
+            }
+        }
+
+        // 添加滑动动画
+        function animateSwipe(card, direction, callback) {
+            const targetX = direction * window.innerWidth;
+            card.style.transition = 'transform 0.3s ease-out';
+            card.style.transform = `translateX(${targetX}px)`;
+            
+            setTimeout(() => {
+                card.style.transition = '';
+                callback();
+            }, 300);
+        }
+
+        // 检查是否需要重置图片列表
+        function checkAndResetImages() {
+            if (currentIndex >= images.length) {
+                images = _.shuffle(images);
+                currentIndex = 0;
+                showImage(currentIndex);
+            }
+        }
 
         imageContainer.addEventListener('touchstart', handleStart);
         imageContainer.addEventListener('touchmove', handleMove);
@@ -508,16 +557,10 @@
                     currentIndex++;
                     showImage(currentIndex);
                 }
+                checkAndResetImages();
             } else {
                 const card = document.querySelector('.image-card');
                 card.style.transform = 'translateX(0)';
-            }
-            
-            // 如果已经看完所有图片，重新打乱顺序开始
-            if (currentIndex >= images.length) {
-                images = _.shuffle(images);
-                currentIndex = 0;
-                showImage(currentIndex);
             }
         }
 

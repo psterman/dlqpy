@@ -1,69 +1,15 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>大佬请批阅</title>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <style>
-        :root {
-            --bg-color: #f5f7fa;
-            --card-bg: #fff;
-            --text-color: #666;
-            --shadow-color: rgba(0, 0, 0, 0.1);
-            --counter-bg: rgba(255, 255, 255, 0.9);
-        }
-
-        [data-theme="dark"] {
-            --bg-color: #1a1a1a;
-            --card-bg: #2d2d2d;
-            --text-color: #e0e0e0;
-            --shadow-color: rgba(0, 0, 0, 0.3);
-            --counter-bg: rgba(45, 45, 45, 0.9);
-        }
-
-        body {
-            background-color: var(--bg-color);
-            transition: background-color 0.3s ease;
-            margin: 0;
-            min-height: 100vh;
-        }
-
-        .theme-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: var(--counter-bg);
-            padding: 10px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            box-shadow: 0 2px 10px var(--shadow-color);
-            z-index: 1000;
-            font-size: 16px;
-            border: none;
-            color: var(--text-color);
-            transition: all 0.3s ease;
-        }
-
-        .theme-toggle:hover {
-            transform: scale(1.05);
-        }
-
+        /* 保留原有样式 */
         .image-container {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin: 20px auto;
-            position: relative;
-            touch-action: pan-y pinch-zoom;
-            cursor: grab;
-            width: 90%;
-            max-width: 800px;
-            background-color: var(--card-bg);
-            perspective: 1000px;
-        }
-
-        .image-container:active {
-            cursor: grabbing;
+            margin-bottom: 50px;
         }
 
         .image-card {
@@ -71,25 +17,8 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px var(--shadow-color);
             padding: 15px;
-            width: 100%;
-            transform: translateX(0);
-            will-change: transform;
-            transition: background-color 0.3s ease;
-            position: relative;
-            transform-style: preserve-3d;
-            backface-visibility: hidden;
-        }
-
-        .image-card.sliding {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .image-card.sliding-right {
-            animation: slideOutRight 0.3s forwards;
-        }
-
-        .image-card.sliding-left {
-            animation: slideOutLeft 0.3s forwards;
+            max-width: 90%;
+            margin: 0 auto;
         }
 
         .image-card img {
@@ -97,843 +26,123 @@
             border-radius: 4px;
         }
 
-        .swipe-hint {
-            position: absolute;
-            bottom: -50px;
+        #folder-input {
+            display: none;
+        }
+
+        .folder-button {
+            position: fixed;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            color: var(--text-color);
-            font-size: 16px;
             padding: 10px 20px;
             background-color: var(--counter-bg);
+            border: none;
             border-radius: 20px;
-            box-shadow: 0 2px 10px var(--shadow-color);
-            white-space: nowrap;
-            pointer-events: none;
-            display: flex;
-            gap: 20px;
-        }
-
-        .funny-counter {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background-color: var(--counter-bg);
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 16px;
-            box-shadow: 0 2px 10px var(--shadow-color);
             color: var(--text-color);
-        }
-
-        .funny-counter .count {
-            color: #ff6b6b;
-            font-weight: bold;
-            margin-left: 5px;
-        }
-
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-
-            to {
-                transform: translateX(120%);
-                opacity: 0;
-            }
-        }
-
-        @keyframes slideOutLeft {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-
-            to {
-                transform: translateX(-120%);
-                opacity: 0;
-            }
-        }
-
-        @keyframes slideInNext {
-            from {
-                transform: translateX(100%) scale(0.8);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateX(0) scale(1);
-                opacity: 1;
-            }
-        }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--bg-color);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            cursor: pointer;
             z-index: 1000;
         }
+    </style>
+</head>
+<body>
+    <div id="image-container"></div>
 
-        .loading-text {
-            color: var(--text-color);
-            font-size: 18px;
-            margin-top: 20px;
-            text-align: center;
-        }
+    <script>
+        const imageContainer = document.getElementById('image-container');
+        let currentIndex = 0;
+        let funnyCount = 0;
+        let images = [];
 
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid var(--counter-bg);
-            border-top-color: #ff6b6b;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        // 使用 GitHub API 获取仓库中 pic 文件夹的内容
+        const owner = 'psterman';
+        const repo = 'dlqpy';
+        const path = 'pic';
+        
+        async function loadImages() {
+            try {
+                const response = await fetch(
+                    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
+                );
+                
+                const files = await response.json();
+                
+                // 过滤出图片文件
+                images = files
+                    .filter(file => file.name.match(/\.(jpg|jpeg|png|gif)$/i))
+                    .map(file => ({
+                        url: file.download_url,
+                        name: file.name
+                    }));
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
+                if (images.length > 0) {
+                    images = _.shuffle(images);
+                    showImage(0);
+                }
+            } catch (error) {
+                console.error('加载图片失败:', error);
             }
         }
-    </style>
-    <script>
-        const imagePaths = [
-            "pic/001pe9JRly1hyjvse16j0j60z015egq902.jpg",
-            "pic/001VouXPgy1hygr8h4cs3j60qo1bbq8302.jpg",
-            "pic/001VouXPgy1hygr8hlkyqj60qc1k5grh02.jpg",
-            "pic/001VouXPgy1hygr8i14d2j60qx1jz45202.jpg",
-            "pic/001VouXPgy1hygr8ie8ldj60pv1is79d02.jpg",
-            "pic/001VouXPgy1hygr8irf0oj60pa1ke77v02.jpg",
-            "pic/001VouXPgy1hygr8j654pj60r01j9tdy02.jpg",
-            "pic/001VouXPgy1hygsvhjieuj60u00hg0wd02.jpg",
-            "pic/4e203c83gy1hylorhybrfj20x10ngn7d.jpg",
-            "pic/005GRSw2gy1hy142rbgdg30hs0hhjsh.jpg",
-            "pic/005GRSw2gy1hy142re1wj30ug30u8del.jpg",
-            "pic/005GRSw2gy1hy142rev9j30uk0u844j.jpg",
-            "pic/005GRSw2gy1hy142re46aj30s70tpg98.jpg",
-            "pic/005GRSw2gy1hy142rfpsu31440u0483.jpg",
-            "pic/005GRSw2gy1hy142fk0g30ya0u8g3u.jpg",
-            "pic/005GRSw2gy1hy142fwg4dj30u00ugfd1.jpg",
-            "pic/005GRSw2gy1hy143fvtg3j30jw0e5ac.jpg",
-            "pic/005GRSw2gy1hy143fwdipj30jw0qjdhl.jpg",
-            "pic/005GRSw2gy1hy143fwho4j30jw06btbb.jpg",
-            "pic/005GRSw2gy1hy143fwpk8j30jw06tg3w.jpg",
-            "pic/005GRSw2gy1hy143fwg4dj30jw06tcwfz.jpg",
-            "pic/005GRSw2gy1hy143g3bjoj30jw0jwqhc.jpg",
-            "pic/005GRSw2gy1hy143g12ecj30jw0qogvh.jpg",
-            "pic/005GRSw2gy1hyibbh1e0j32o919akbj.jpg",
-            "pic/005GRSw2gy1hyibbh35pyj30f60c0t8l.jpg",
-            "pic/005GRSw2gy1hyibbh38pvj31jk2bc136.jpg",
-            "pic/005GRSw2gy1hyibbhf4dpj30zq0p0k1n.jpg",
-            "pic/005GRSw2gy1hym9cm0g0g30em0lktb8.jpg",
-            "pic/005GRSw2gy1hym9cm0hg38hh8e800j.jpg",
-            "pic/005GRSw2gy1hym9cm1m2lj30yw0u0wji.jpg",
-            "pic/005GRSw2gy1hym9cm1s1nj30q60u0dkw.jpg",
-            "pic/005GRSw2gy1hym9cm0m8gj31h0u0gul.jpg",
-            "pic/005GRSw2gy1hym9cm02g60ek0e0q47.jpg",
-            "pic/005GRSw2gy1hym9cm2tyfj30xu0u0do2.jpg",
-            "pic/005GRSw2gy1hym9crmp1lj30qc0k0gn0.jpg",
-            "pic/6000b413ly1hyi1ysxj4hj20wi0kq3z8.jpg",
-            "pic/6000b413ly1hyi1ysxmttj20wi0kx3zd.jpg",
-            "pic/6000b413ly1hyi1ysxrrhj20wi0ko0tm.jpg",
-            "pic/6000b413ly1hyi1yszq3uj20wi10x0uo.jpg",
-            "pic/6000b413ly1hyi1yt05vlj20wi0yv0vb.jpg",
-            "pic/6000b413ly1hyi1ytc5f1j20wi0gxt9s.jpg",
-            "pic/640c032aly1hyjvbj3wv4j20k00ktab5.jpg",
-            "pic/640c032aly1hyjvbj3wv8j20k00mnabn.jpg",
-            "pic/640c032aly1hyjvbj43fhj20k00ogdhp.jpg",
-            "pic/640c032aly1hyjvbj54wxj20zk1bf430.jpg",
-            "pic/65410c63gy1hyivzrs2b1j20u04aeqp5.jpg",
-            "pic/66b3de17gy1hyldl2j0m2j20hs0np76e.jpg",
-            "pic/66b3de17gy1hyldl2o0s6j20go0ixaam.jpg",
-            "pic/66b3de17gy1hyldl2tedsj20kk0ffaam.jpg",
-            "pic/66b3de17gy1hyldl2zuevj20k00okq6t.jpg",
-            "pic/66b3de17gy1hyldl35bqrj20kk0ffwfr.jpg",
-            "pic/66b3de17gy1hyldl3a6fgj20k10gomyq.jpg",
-            "pic/66b3de17gy1hyldl3fxq2j20go0m50tu.jpg",
-            "pic/66b3de17gy1hyldl3lrvyj20h10gowg4.jpg",
-            "pic/66b3de17gy1hyldl3rywdj20kk0bu402.jpg",
-            "pic/66b3de17gy1hyldl3xk5wj20kk0retau.jpg",
-            "pic/66b3de17gy1hyldl42wf8j20kk0gdmxo.jpg",
-            "pic/66b3de17gy1hyldl4bn4xj20kk0dn3zi.jpg",
-            "pic/66b3de17gy1hyldl54on6j20kk0dpdhz.jpg",
-            "pic/66b3de17gy1hyldl5e2cnj20kk0dpgmc.jpg",
-            "pic/66b3de17gy1hyldl5l2qlj20kk0ssn21.jpg",
-            "pic/66b3de17gy1hyldl5rlc4j20kk0rfgn0.jpg",
-            "pic/66b3de17gy1hyldl5wqyhj20kk0bnaam.jpg",
-            "pic/66b3de17gy1hyldl63syjj20kk0bkq41.jpg",
-            "pic/66b3de17gy1hyldl6bfrkj20kk0rbacv.jpg",
-            "pic/66b3de17gy1hyldl6i2pqj20kk0rfgov.jpg",
-            "pic/66b3de17gy1hyldl6q0w4j20kk0re0ut.jpg",
-            "pic/66b3de17gy1hylmsmofi6j20go0gmn65.jpg",
-            "pic/66b3de17gy1hylmsmv2y7j20xc0ir76m.jpg",
-            "pic/66b3de17gy1hylmsn0zugj20xc0irgn4.jpg",
-            "pic/66b3de17gy1hylmsn6fwmj20go0lqjtg.jpg",
-            "pic/66b3de17gy1hylmsnye1dj20go0ljwil.jpg",
-            "pic/66b3de17gy1hylmso66h0j20go0m8n18.jpg",
-            "pic/66b3de17gy1hylmsp4n5wj20go0e577z.jpg",
-            "pic/66b3de17gy1hylmspa37qj20go0i30vg.jpg",
-            "pic/66b3de17gy1hylmspgrbgj20go0goq5u.jpg",
-            "pic/66b3de17gy1hylmspnpbfj20go0rhdka.jpg",
-            "pic/66b3de17gy1hylmspt6vsj20go0p476r.jpg",
-            "pic/66b3de17gy1hylmsq0mtoj20go0kn7fr.jpg",
-            "pic/66b3de17gy1hylmsq833bj20go0grmzd.jpg",
-            "pic/66b3de17gy1hylmsqdq36j20go0fp0vx.jpg",
-            "pic/66b3de17gy1hylmsqjx76j20pk0medjt.jpg",
-            "pic/66b3de17gy1hylmsqqvnnj20go0gbdjx.jpg",
-            "pic/66b3de17gy1hylmsqwex6j20go0kugpe.jpg",
-            "pic/66b3de17gy1hylmsr2wpej20go0ib41i.jpg",
-            "pic/66b3de17gy1hylmsr8v3wj20go0me459.jpg",
-            "pic/66b3de17gy1hylmsrdygpj20go0cxgo7.jpg",
-            "pic/66b3de17gy1hylmsriyw4j20go0m8wid.jpg",
-            "pic/66b3de17gy1hylmssua3fj20go0l3aep.jpg",
-            "pic/66b3de17gy1hylmssztr1j20go0cggo0.jpg",
-            "pic/66b3de17gy1hylmst7gzbj20go0ki43d.jpg",
-            "pic/66b3de17gy1hylmstiuigj20go0e848k.jpg",
-            "pic/66b3de17gy1hylmstpzuzj20go0ku42n.jpg",
-            "pic/66b3de17gy1hylmstx16qj20go1b1dn4.jpg",
-            "pic/66b3de17gy1hylmsu4e2lj20pk0pcaez.jpg",
-            "pic/66b3de17gy1hylmsu9x7wj20go0kuwl9.jpg",
-            "pic/6dd57921ly1hyk1f4komyj21c91e31kx.jpg",
-            "pic/72cb1624gy1hylmhwtorij20v60ksgr4.jpg",
-            "pic/844527a1gy1hykgzr1my0j20sg0uojvf.jpg",
-            "pic/844527a1gy1hylf1mwv1hj23402c01kx.jpg",
-            "pic/844527a1gy1hylf1mx8okj23402c07wh.jpg",
-            "pic/844527a1gy1hylf1n00p4j22c03401kx.jpg",
-            "pic/844527a1gy1hylf1nhho4j22e135s1l0.jpg",
-            "pic/87f7b519gy1hyk1n6ftd2j20qy157n13.jpg",
-            "pic/88848647gy1hylfzl35f9j20jg0apwh1.jpg",
-            "pic/88848647gy1hylfznk4efj20m80kugxr.jpg",
-            "pic/88848647gy1hymb6me081j20k00im45c.jpg",
-            "pic/88848647gy1hymb6p65zfj20m80m8qn9.jpg",
-            "pic/9f0b0dd5ly1hyk6aapbnwj20kg0wpdik.jpg",
-            "pic/9f0b0dd5ly1hyk6rp95bhj20zk0qq41q.jpg",
-            "pic/9f0b0dd5ly1hyk7i53pulj20mj140jwx.jpg",
-            "pic/9f0b0dd5ly1hyk84knpp4j20k00jpgo9.jpg",
-            "pic/9f0b0dd5ly1hyk9zaxjo9j20k00dw761.jpg",
-            "pic/9f0b0dd5ly1hyka4t86j8j20e60iwgnj.jpg",
-            "pic/9f0b0dd5ly1hykij3paxgj216n1kwk11.jpg",
-            "pic/9f0b0dd5ly1hykiyedaj5j20u00u043e.jpg",
-            "pic/9f0b0dd5ly1hyl9tj1r8gj20mi0u0q9p.jpg",
-            "pic/9f0b0dd5ly1hyl9tj2mj0j20mi0u0n3n.jpg",
-            "pic/9f0b0dd5ly1hyl9tj3uwpj20mi0u0tgn.jpg",
-            "pic/9f0b0dd5ly1hyl9tj41gaj20mj0u0dno.jpg",
-            "pic/9f0b0dd5ly1hymfkx2cgyj20p00yzwp0.jpg",
-            "pic/9f0b0dd5ly1hymfl8xm7ej20xc18gjys.jpg",
-            "pic/9f0b0dd5ly1hymfoti9skj20px0o2tax.jpg",
-            "pic/9f0b0dd5ly1hymfpzycxvj20i50ec772.jpg",
-            "pic/9f0b0dd5ly1hymfpzzba4j20ig0n6th8.jpg",
-            "pic/9f0b0dd5ly1hymfq0000dj20i40itwll.jpg",
-            "pic/9f0b0dd5ly1hymfv6b9rjj219d0pdgpi.jpg",
-            "pic/9f0b0dd5ly1hymgohfqqtj20sg0fzn09.jpg",
-            "pic/9f0b0dd5ly1hymgohg6bfj20sg0g0wia.jpg",
-            "pic/9f0b0dd5ly1hymj1rp0uwj20fd0hkjse.jpg",
-            "pic/9f0b0dd5ly1hymj33hwuwj20gf0nngsa.jpg",
-            "pic/9f0b0dd5ly1hymjgcadwrj20gh0bk40l.jpg",
-            "pic/9f0b0dd5ly1hymkahcvz0j20n00msq44.jpg",
-            "pic/a2c3a443gy1hyjfgegjf7j20u098gb29.jpg",
-            "pic/b757552fgy1hyl4ial92pj20d20fcaei.jpg",
-            "pic/b757552fgy1hyl4iamdb6j20eb0f0te7.jpg",
-            "pic/b757552fgy1hyl4iamugdj21f51evn7i.jpg",
-            "pic/b757552fgy1hyl4iap4kvj20u011tk60.jpg",
-            "pic/b757552fgy1hyl4ib05lzj20dw0eqab0.jpg",
-            "pic/b757552fgy1hyl4ibejuwj20j60hbaga.jpg",
-            "pic/b757552fgy1hyl4ibsakvj20kt0jqdoo.jpg",
-            "pic/b757552fgy1hyl4ibxxncj20jg0pu7be.jpg",
-            "pic/b757552fgy1hyl4ic15qhj20u00wn15x.jpg",
-            "pic/b757552fgy1hyl4ic969zj20u013ch71.jpg",
-            "pic/b757552fgy1hyl4iccm04j20u01941kx.jpg",
-            "pic/b757552fgy1hymams9sarj20k00mnaef.jpg",
-            "pic/b757552fgy1hymamsajd0j20j60he796.jpg",
-            "pic/b757552fgy1hymamsq9e7j218g0w27ry.jpg",
-            "pic/b757552fgy1hymamtubw0j20re0zktnj.jpg",
-            "pic/b757552fgy1hymamu1wrzj20u00y04dq.jpg",
-            "pic/dbe93519gy1hyksadsdbyj20z44jmnpd.jpg",
-            "pic/e650d1f9ly1hyl6f8enlkj20hs0iz75w.jpg",
-            "pic/e650d1f9ly1hylptsypt8j20go0lqn08.jpg",
-            "pic/e7ac9c63ly1hylaem84ohj21401hck07.jpg",
-            "pic/e7ac9c63ly1hylaewahrlj20fa0jht9u.jpg",
-            "pic/e7ac9c63ly1hylagasvvbj20qe0z6jve.jpg",
-            "pic/e7ac9c63ly1hylah1u8gnj20gw0om0tl.jpg",
-            "pic/008HL3Tkly1hyk57n4a1pj30z025sh18.jpg",
-            "pic/008HL3Tkly1hyk57skppuj30z025sk76.jpg",
-            "pic/008HL3Tkly1hyk5ag6650j30u0140e81.jpg",
-            "pic/008HL3Tkly1hyk5dcj932j30zk184q4v.jpg",
-            "pic/008HL3Tkly1hyk5fresb4j30u016gjv6.jpg",
-            "pic/008HL3Tkly1hyk5i1ft9sj30mj0lv7hz.jpg",
-            "pic/008HL3Tkly1hyk5i6pdhyj30u017xtc0.jpg",
-            "pic/008HL3Tkly1hyk5id811uj30tg0swtbd.jpg",
-            "pic/008HL3Tkly1hyk5ij25qjj30b40f5t9a.jpg",
-            "pic/008HL3Tkly1hyk5ivr4ikj30fa0dztbe.jpg",
-            "pic/008HL3Tkly1hyk5j1xge1j30cs08tq5b.jpg",
-            "pic/008HL3Tkly1hyk5j8789xj30cs0eota1.jpg",
-            "pic/008HL3Tkly1hyk5jej8jrj30ph0zkjtx.jpg",
-            "pic/008HL3Tkly1hyk5jkr5zij30u00n2tag.jpg",
-            "pic/008HL3Tkly1hyk5lbnadej30nm0z448k.jpg",
-            "pic/008HL3Tkly1hyk61oytbaj30qo1cmtn4.jpg",
-            "pic/008HL3Tkly1hyk739ap8bj30v9161tk4.jpg",
-            "pic/008HL3Tkly1hyk7o32x4xj30k035skdq.jpg",
-            "pic/008HL3Tkly1hyk83bnd5aj30uo1m1k0t.jpg",
-            "pic/008HL3Tkly1hyk85xr0laj30m30bngnw.jpg",
-            "pic/008HL3Tkly1hyk8aa3zt4j30j91evgzx.jpg",
-            "pic/008HL3Tkly1hyk8d7sx3mj30qo13fjx6.jpg",
-            "pic/008HL3Tkly1hyk8ddgyszj30qo13fwkp.jpg",
-            "pic/008HL3Tkly1hyk8djrc5pj30qo13f0y4.jpg",
-            "pic/008HL3Tkly1hyk8dq6uqfj30qo13fwjg.jpg",
-            "pic/008HL3Tkly1hyk8mfu85sj30u014b7e4.jpg",
-            "pic/008HL3Tkly1hyk8w5h8jvj30wi15sau9.jpg",
-            "pic/008HL3Tkly1hyk93f234sj30zi1a3n3j.jpg",
-            "pic/008HL3Tkly1hyk9ncgfjuj30u014076y.jpg",
-            "pic/008HL3Tkly1hyk9pruu8hj30d607fq30.jpg",
-            "pic/008HL3Tkly1hyk9pxt8ddj30dc07iwg6.jpg",
-            "pic/008HL3Tkly1hyk9uzermuj31q10yw130.jpg",
-            "pic/008HL3Tkly1hyk9vnqh7uj30qm0f0wgv.jpg",
-            "pic/008HL3Tkly1hyk9vu3p57j30xb0xcdkc.jpg",
-            "pic/008HL3Tkly1hyk9wpqgcqj30k02gw45u.jpg",
-            "pic/008HL3Tkly1hyk9ym9b2wj30o01hctco.jpg",
-            "pic/008HL3Tkly1hyka47fo35j318g1n74qp.jpg",
-            "pic/008HL3Tkly1hykb5mlivxj30jc0e4t9j.jpg",
-            "pic/008HL3Tkly1hykbc7qtyej30br078wfs.jpg",
-            "pic/008HL3Tkly1hykbqc9urmj30u01hc7j3.jpg",
-            "pic/008HL3Tkly1hykc5dg75xj30wi0p876e.jpg",
-            "pic/008HL3Tkly1hykch0rao5j30l10sgady.jpg",
-            "pic/008HL3Tkly1hykch4vkyij30cs0c5wf0.jpg",
-            "pic/008HL3Tkly1hykchifv6pj30zt1apad4.jpg",
-            "pic/008HL3Tkly1hykchpn1xgj30fa0bu0x5.jpg",
-            "pic/008HL3Tkly1hykchuuq19j30x00u078w.jpg",
-            "pic/008HL3Tkly1hykci3njcej30cd0jhn0z.jpg",
-            "pic/008HL3Tkly1hykck1lf0sj32c02s0k8c.jpg",
-            "pic/008HL3Tkly1hykckc5998j30fa0hk42n.jpg",
-            "pic/008HL3Tkly1hykckg3heij30zt14lacv.jpg",
-            "pic/008HL3Tkly1hykckscfncj30zk0hs3zc.jpg",
-            "pic/008HL3Tkly1hykcky5o0nj309g0b6q3d.jpg",
-            "pic/008HL3Tkly1hykcqjago7j30u02l7dy5.jpg",
-            "pic/008HL3Tkly1hykcx7bfg1j30u0151gwc.jpg",
-            "pic/008HL3Tkly1hykdezkd66j30v8136ad9.jpg",
-            "pic/008HL3Tkly1hykdln20dmj30u01877am.jpg",
-            "pic/008HL3Tkly1hykdxvmnm5j30au0edwgu.jpg",
-            "pic/008HL3Tkly1hykeayustaj30u02uqn96.jpg",
-            "pic/008HL3Tkly1hykesqs2zgj30rs0rstbg.jpg",
-            "pic/008HL3Tkly1hykf5lxj7dj30go0hjadd.jpg",
-            "pic/008HL3Tkly1hykf8iv56pj30ku0r3q82.jpg",
-            "pic/008HL3Tkly1hykfcimmrhj30dw0idtaa.jpg",
-            "pic/008HL3Tkly1hykfl62v62j30go0oywl2.jpg",
-            "pic/008HL3Tkly1hykfxcwu3uj30th0iedim.jpg",
-            "pic/008HL3Tkly1hykg9wm11yj30h31fttec.jpg",
-            "pic/008HL3Tkly1hykgaccfbtj318g1n97wh.jpg",
-            "pic/008HL3Tkly1hykgdl0ifjj30u01uogty.jpg",
-            "pic/008HL3Tkly1hykgdyd0h8j30u01hqtj4.jpg",
-            "pic/008HL3Tkly1hykge9aksij30u01ha7dh.jpg",
-            "pic/008HL3Tkly1hykgeddzfj30u01hc7f9.jpg",
-            "pic/008HL3Tkly1hykghgg7mej30m80m80ws.jpg",
-            "pic/008HL3Tkly1hykgkwjo7fj30kg0qo40n.jpg",
-            "pic/008HL3Tkly1hykgzb6clmj30o01hcq8o.jpg",
-            "pic/008HL3Tkly1hykhfe0yosj32c0340b2b.jpg",
-            "pic/008HL3Tkly1hykhfxm3lxj318g1n9npd.jpg",
-            "pic/008HL3Tkly1hykiyxffxnj31kw16owmf.jpg",
-            "pic/008HL3Tkly1hykiz5dlhlj335s2cz7te.jpg",
-            "pic/008HL3Tkly1hykiz9ft26j30sm0bgzmq.jpg",
-            "pic/008HL3Tkly1hykizfo4m2j30v90u5775.jpg",
-            "pic/008HL3Tkly1hykj04s3g5j30jp0zkgnn.jpg",
-            "pic/008HL3Tkly1hykj0b9v5fj30zi19rn3u.jpg",
-            "pic/008HL3Tkly1hykj39a123j30go0nt76l.jpg",
-            "pic/008HL3Tkly1hykjm00w68j30u0141nf1.jpg",
-            "pic/008HL3Tkly1hykk9j153hj312w1fu1kz.jpg",
-            "pic/008HL3Tkly1hykksaw7nej30ls0qo40j.jpg",
-            "pic/008HL3Tkly1hykksgnjn5j30c00qoaaz.jpg",
-            "pic/008HL3Tkly1hykxhmo9gsj30s20l2q5f.jpg",
-            "pic/008HL3Tkly1hykygo89gdj30u011ux3m.jpg",
-            "pic/008HL3Tkly1hykygtcgb6j30jg0imgmr.jpg",
-            "pic/008HL3Tkly1hykygzlzv7j30k00k0tb8.jpg",
-            "pic/008HL3Tkly1hykyh62jd9j30rs15oan6.jpg",
-            "pic/008HL3Tkly1hykyhilqmxj31tv1bbdup.jpg",
-            "pic/008HL3Tkly1hykyhoqgh8j30re0rs78l.jpg",
-            "pic/008HL3Tkly1hykyi12kv8j30mu0mumyo.jpg",
-            "pic/008HL3Tkly1hykyi7jypwj31kw1kwwuj.jpg",
-            "pic/008HL3Tkly1hykylbz9uij30wi0mcq64.jpg",
-            "pic/008HL3Tkly1hykylo9h0cj30pl0sgtd3.jpg",
-            "pic/008HL3Tkly1hykyluieksj30ps0y8jzy.jpg",
-            "pic/008HL3Tkly1hykym0sxwxj30j60r7whm.jpg",
-            "pic/008HL3Tkly1hykymjl9dcj30pm0vi41t.jpg",
-            "pic/008HL3Tkly1hykympnsb8j30z00yn40m.jpg",
-            "pic/008HL3Tkly1hykymvu7tuj30mq0audh9.jpg",
-            "pic/008HL3Tkly1hykyn277vwj30hs0lth66.jpg",
-            "pic/008HL3Tkly1hykynys5xvj318g26ze81.jpg",
-            "pic/008HL3Tkly1hykyyp5be9j30u012ltkn.jpg",
-            "pic/008HL3Tkly1hykzz45o2tj30k018g760.jpg",
-            "pic/008HL3Tkly1hyl00obpyrj30hs13iwih.jpg",
-            "pic/008HL3Tkly1hyl01j5u5dj30qo1btgpr.jpg",
-            "pic/008HL3Tkly1hyl0a1799oj30zu25o7pt.jpg",
-            "pic/008HL3Tkly1hyl0a7d8qpj30zu25o1go.jpg",
-            "pic/008HL3Tkly1hyl0vd5pnbj30iw0g4769.jpg",
-            "pic/008HL3Tkly1hyl0vj5mdkj31c81w8tfa.jpg",
-            "pic/008HL3Tkly1hyl0vp948sj30g20oidh4.jpg",
-            "pic/008HL3Tkly1hyl0vvjh88j30j40apjwu.jpg",
-            "pic/008HL3Tkly1hyl0w1upk8j30go0nc0uv.jpg",
-            "pic/008HL3Tkly1hyl0we9uwlj30pc0zkjvc.jpg",
-            "pic/008HL3Tkly1hyl0wkgt53j30qo0nmdji.jpg",
-            "pic/008HL3Tkly1hyl0wqssqxj30u00u0dis.jpg",
-            "pic/008HL3Tkly1hyl0x3g1izj30em0qo75e.jpg",
-            "pic/008HL3Tkly1hyl101l43jj30wq0akq6a.jpg",
-            "pic/008HL3Tkly1hyl11fekssj30mq0qpthi.jpg",
-            "pic/008HL3Tkly1hyl11liza5j30n30fs0zz.jpg",
-            "pic/008HL3Tkly1hyl1vtpnz9j318g0xcdzi.jpg",
-            "pic/008HL3Tkly1hyl266xc9vj30dw0nwdir.jpg",
-            "pic/008HL3Tkly1hyl2csmjaxj314028h18j.jpg",
-            "pic/008HL3Tkly1hylu40pvf8j30qm0zkn14.jpg",
-            "pic/008HL3Tkly1hylu4d1euzj30fy0zkgnw.jpg",
-            "pic/008HL3Tkly1hylu4j74mpj30j106oaat.jpg",
-            "pic/008HL3Tkly1hylu4pg20yj30ja09k752.jpg",
-            "pic/008HL3Tkly1hylu4wm4iuj30l00l0acc.jpg",
-            "pic/008HL3Tkly1hylu524bguj31c81w8wme.jpg",
-            "pic/008HL3Tkly1hylu58sjezj32dc35sb29.jpg",
-            "pic/008HL3Tkly1hylu5eherjj30j40x0tcx.jpg",
-            "pic/008HL3Tkly1hylu69qpbbj30wi1ycafi.jpg",
-            "pic/008HL3Tkly1hylu6fxaczj30wi0zqadn.jpg",
-            "pic/008HL3Tkly1hylu6zmbhij31400u0e81.jpg",
-            "pic/008HL3Tkly1hylu74yn4lj30ua0v077n.jpg",
-            "pic/008HL3Tkly1hylu7b2z4bj30er0rjjts.jpg",
-            "pic/008HL3Tkly1hylu7hbyq5j30jg0obdj4.jpg",
-            "pic/008HL3Tkly1hylu7txyiej31kw1kwn3y.jpg",
-            "pic/008HL3Tkly1hylu86emj2j31kw1kwwjw.jpg",
-            "pic/008HL3Tkly1hylu8j4dirj31401h4k3r.jpg",
-            "pic/008HL3Tkly1hylu9r7cu0j30p70zk76r.jpg",
-            "pic/008HL3Tkly1hyluaaby9ij30u00up787.jpg",
-            "pic/008HL3Tkly1hyluagm3l8j31401hotf2.jpg",
-            "pic/008HL3Tkly1hyluan955rj30ja5pkqv6.jpg",
-            "pic/008HL3Tkly1hyluat61e0j30v910s0yc.jpg",
-            "pic/008HL3Tkly1hylubijio2j30v90rlmzg.jpg",
-            "pic/008HL3Tkly1hyluc7pg9nj30u020mwox.jpg",
-            "pic/008HL3Tkly1hyluce18h8j30u01pl18p.jpg",
-            "pic/008HL3Tkly1hylucqckrhj30qj0plte5.jpg",
-            "pic/008HL3Tkly1hylucweqh0j30f805pt96.jpg",
-            "pic/008HL3Tkly1hylud2q62xj30kv0zkwha.jpg",
-            "pic/008HL3Tkly1hylud9eonzj30ja5pkqv6.jpg",
-            "pic/008HL3Tkly1hyludrw14cj31061ban4g.jpg",
-            "pic/008HL3Tkly1hyludzltxdj31r03401ky.jpg",
-            "pic/008HL3Tkly1hylue4ac4yj31kw1kw7d8.jpg",
-            "pic/008HL3Tkly1hylueahh77j31kw1kwgqi.jpg",
-            "pic/008HL3Tkly1hyluei770kj318g270kjl.jpg",
-            "pic/008HL3Tkly1hyluemx6ekj30qk0qcadn.jpg",
-            "pic/008HL3Tkly1hyluet50l9j30dq0iq768.jpg",
-            "pic/008HL3Tkly1hylufob0rxj30dc0icabn.jpg",
-            "pic/008HL3Tkly1hyluful2hfj30hs0n4jux.jpg",
-            "pic/008HL3Tkly1hylugjknjej30hs0pctbz.jpg",
-            "pic/008HL3Tkly1hylugpwr6bj30qo0zkk0c.jpg",
-            "pic/008HL3Tkly1hylugw45ppj30k00zk7cn.jpg",
-            "pic/008HL3Tkly1hyluh2ee51j30zk1917c7.jpg",
-            "pic/008HL3Tkly1hyluhl3aegj30hs22n108.jpg",
-            "pic/008HL3Tkly1hyluhrbmcbj30qo0zkgtm.jpg",
-            "pic/008HL3Tkly1hylui4ebrdj30sg0zkac4.jpg",
-            "pic/008HL3Tkly1hyluiaknvaj30do0isabr.jpg",
-            "pic/008HL3Tkly1hyluiurrvqj30om1hc78j.jpg",
-            "pic/008HL3Tkly1hylup32fb3j30tz0yz41x.jpg",
-            "pic/008HL3Tkly1hylupffqjpj30n80tqjzj.jpg",
-            "pic/008HL3Tkly1hyluqo0di6j30r4256wqf.jpg",
-            "pic/008HL3Tkly1hyluqu1tlrj30qk0lwq41.jpg",
-            "pic/008HL3Tkly1hylur751skj31401mgb1j.jpg",
-            "pic/008HL3Tkly1hyluu8hjuvj30nz1hcjvu.jpg",
-            "pic/008HL3Tkly1hyluw3c4e0j30nz1hcjw6.jpg",
-            "pic/008HL3Tkly1hyluwfnv4gj30xc0jgabq.jpg",
-            "pic/008HL3Tkly1hyluwlvjrmj30go0motat.jpg",
-            "pic/008HL3Tkly1hyluy4gkqkj30px0gj0xd.jpg",
-            "pic/008HL3Tkly1hyluz8k412j30ga050aal.jpg",
-            "pic/008HL3Tkly1hylv0673xoj30yg0jego4.jpg",
-            "pic/008HL3Tkly1hylv17jkvgj30k00nrdid.jpg",
-            "pic/008HL3Tkly1hylv1qaxa0j30j60ryq4r.jpg",
-            "pic/008HL3Tkly1hylv23578qj30w813btgy.jpg",
-            "pic/008HL3Tkly1hylv28xg90j30xw0hmq4a.jpg",
-            "pic/008HL3Tkly1hylv2fb44rj30s80xcjud.jpg",
-            "pic/008HL3Tkly1hylv3gqws4j30ry0zkq6c.jpg",
-            "pic/008HL3Tkly1hylv3n27b3j30zj1be7cc.jpg",
-            "pic/008HL3Tkly1hylv4ohjbjj30u014045o.jpg",
-            "pic/008HL3Tkly1hylv4uqmstj30tw13w7au.jpg",
-            "pic/008HL3Tkly1hylv51040sj30tw13wwm7.jpg",
-            "pic/008HL3Tkly1hylv578dpvj30tw13waif.jpg",
-            "pic/008HL3Tkly1hylv5dg870j30tw13w468.jpg",
-            "pic/008HL3Tkly1hylv5jprx0j30tw13w10c.jpg",
-            "pic/008HL3Tkly1hylv5pzsltj30tw13wgtm.jpg",
-            "pic/008HL3Tkly1hylv5w85u7j30tw13wn4r.jpg",
-            "pic/008HL3Tkly1hylv68qr0lj30nk0zkjsj.jpg",
-            "pic/008HL3Tkly1hylv6euzoxj30u00mrdiw.jpg",
-            "pic/008HL3Tkly1hylv6r9iddj30b20kiwg9.jpg",
-            "pic/008HL3Tkly1hylv6xkn8oj30qb0kgmyv.jpg",
-            "pic/008HL3Tkly1hylv73qlntj30rb08emxz.jpg",
-            "pic/008HL3Tkly1hylv7a3i2sj30fa0ycdju.jpg",
-            "pic/008HL3Tkly1hylv7gaupij30zk0kq402.jpg",
-            "pic/008HL3Tkly1hylv7mhojvj30gm0kata1.jpg",
-            "pic/008HL3Tkly1hylv7svooej30p80xc41h.jpg",
-            "pic/008HL3Tkly1hylv7z2kqyj30g00zkq5h.jpg",
-            "pic/008HL3Tkly1hylv857432j307r0kujsp.jpg",
-            "pic/008HL3Tkly1hylv8bj7t5j30eb0n0dmc.jpg",
-            "pic/008HL3Tkly1hylv8hp8g4j30eb0n0dmc.jpg",
-            "pic/008HL3Tkly1hylv8o5lwuj30wn15utyt.jpg",
-            "pic/008HL3Tkly1hylv8uabqwj30hm0iwq4g.jpg",
-            "pic/008HL3Tkly1hylv90hrllj30sm0lp3zl.jpg",
-            "pic/008HL3Tkly1hylv96r2yij31kw0lpwhk.jpg",
-            "pic/008HL3Tkly1hylv9d0eh8j31kw0pmgoz.jpg",
-            "pic/008HL3Tkly1hylv9j8nx5j31kw0pmadw.jpg",
-            "pic/008HL3Tkly1hylv9p8nt4j31kw0pmtd0.jpg",
-            "pic/008HL3Tkly1hylv9vgbwij31kw0pmq6p.jpg",
-            "pic/008HL3Tkly1hylva1qm4ij31kw0pmwi4.jpg",
-            "pic/008HL3Tkly1hylva7ygwij31kw0pmwi4.jpg",
-            "pic/008HL3Tkly1hylvae6uo6j31kw0pmq6p.jpg"
-        ];
 
-        let currentPage = 1;
-        const imagesPerPage = 1;
-        let shuffledImagePaths = _.shuffle(imagePaths);
-        let isMouseDown = false;
+        function showImage(index) {
+            imageContainer.innerHTML = '';
+            
+            const container = document.createElement('div');
+            container.className = 'image-container';
+            
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            
+            const img = document.createElement('img');
+            img.src = images[index].url;
+            img.alt = images[index].name;
+            
+            card.appendChild(img);
+            container.appendChild(card);
+            imageContainer.appendChild(container);
+        }
+
+        // 添加左右滑动处理
         let startX = 0;
         let currentX = 0;
-        let funnyCount = 0;
-        let preloadManager;
 
-        // 添加文案数组
-        const dislikeTexts = [
-            "朕已阅", "退下吧", "不准奏", "无趣", "枯燥",
-            "乏味", "朕不悦", "荒谬", "胡闹", "放肆",
-            "大胆", "荒唐", "糊涂", "不知所谓", "岂有此理",
-            "朕累了", "朕乏了", "朕倦了", "下一个", "不值一看",
-            "休得胡言", "简直可笑", "无稽之谈", "朕不想看", "太过无聊",
-            "难登大雅", "不知天高地厚", "不知分寸", "太过草率", "朕看不下去了",
-            "有辱斯文", "贻笑大方", "不知检点", "不堪入目", "朕甚失望",
-            "不知悔改", "不知进退", "不知轻重", "不知好歹", "不知羞耻",
-            "朕心烦了", "朕不准", "朕不许", "朕不要", "着实无趣",
-            "甚是无味", "令朕生厌", "令朕不快", "令朕反感", "令朕作呕"
-        ];
+        imageContainer.addEventListener('touchstart', handleStart);
+        imageContainer.addEventListener('touchmove', handleMove);
+        imageContainer.addEventListener('touchend', handleEnd);
 
-        const likeTexts = [
-            "龙颜大悦", "准奏", "甚好", "不错", "有趣",
-            "妙哉", "爱卿说得好", "朕很欣慰", "可", "准",
-            "御笔亲批", "朕准了", "甚妙", "妙不可言", "深得朕心",
-            "朕很满意", "善", "极好", "朕笑了", "卿家有才",
-            "果然精彩", "深得朕意", "朕甚欢喜", "妙笔生花", "才思敏捷",
-            "朕要重赏", "卿家妙极", "真乃大才", "朕要多看几遍", "传朕旨意",
-            "朕龙心大悦", "妙不可言", "绝妙好辞", "朕准了", "甚合朕意",
-            "爱卿用心了", "朕很喜欢", "可圈可点", "令朕开怀", "妙趣横生",
-            "朕要赏赐", "朕要嘉奖", "朕要褒奖", "朕要表彰", "朕要夸赞",
-            "朕心甚悦", "朕意甚慰", "朕心大快", "朕意大畅", "朕心舒畅"
-        ];
-
-        // 添加已使用文案追踪
-        let usedDislikeTexts = new Set();
-        let usedLikeTexts = new Set();
-
-        function getRandomText(isLike) {
-            const texts = isLike ? likeTexts : dislikeTexts;
-            const usedTexts = isLike ? usedLikeTexts : usedDislikeTexts;
-
-            // 如果所有文案都用过了，清空已使用记录
-            if (usedTexts.size >= texts.length) {
-                usedTexts.clear();
-            }
-
-            // 从未使用的文案中随机选择
-            let availableTexts = texts.filter(text => !usedTexts.has(text));
-            let selectedText = availableTexts[Math.floor(Math.random() * availableTexts.length)];
-
-            // 记录已使用的文案
-            usedTexts.add(selectedText);
-
-            return selectedText;
+        function handleStart(e) {
+            startX = e.touches[0].clientX;
+            currentX = startX;
         }
 
-        // 添加加载时的舔狗文案
-        const loadingTexts = [
-            "奴才正在为皇上准备奏折...",
-            "小的正在整理御览资料...",
-            "奴才斗胆为陛下筛选...",
-            "恳请圣上稍候片刻...",
-            "奴才正在诚惶诚恐地准备...",
-            "容奴才为陛下精选...",
-            "奴才正在战战兢兢地整理...",
-            "请容奴才为圣上过目...",
-            "奴才正在为万岁爷准备...",
-            "小的不敢怠慢，马上呈上...",
-            "奴才正在用心准备...",
-            "恳请陛下稍作休息...",
-            "奴才正在为圣上效劳...",
-            "容奴才为陛下筛选精品...",
-            "小的正在竭尽全力准备...",
-            "奴才正在为皇上精心挑选...",
-            "请容奴才再做细选...",
-            "万岁爷请稍候，马上呈上...",
-            "奴才正在为陛下忙碌...",
-            "小的不敢懈怠，即刻呈递...",
-            "恳请圣上稍作歇息...",
-            "奴才正在为陛下效命...",
-            "容小的为皇上准备...",
-            "奴才正在为万岁爷甄选...",
-            "请容奴才为圣上整理...",
-            "小的正在为陛下忙活...",
-            "奴才正在为皇上筛选...",
-            "恳请万岁爷稍等片刻...",
-            "奴才正在为圣上准备...",
-            "容小的为陛下效劳...",
-            "奴才正在为皇上整理...",
-            "请容奴才为万岁爷准备...",
-            "小的正在为圣上筛选...",
-            "奴才正在为陛下甄选...",
-            "恳请皇上稍作休息...",
-            "奴才正在为圣上忙碌...",
-            "容小的为万岁爷效劳...",
-            "奴才正在为陛下准备...",
-            "请容奴才为皇上整理...",
-            "小的正在为圣上效命...",
-            "奴才正在为万岁爷筛选...",
-            "恳请陛下稍候片刻...",
-            "奴才正在为皇上甄选...",
-            "容小的为圣上效劳...",
-            "奴才正在为陛下整理...",
-            "请容奴才为万岁爷准备...",
-            "小的正在为圣上筛选...",
-            "奴才正在为皇上效命...",
-            "恳请万岁爷稍等片刻...",
-            "奴才正在为陛下忙活..."
-        ];
-
-        // 显示加载动画
-        function showLoading() {
-            const loadingOverlay = document.createElement('div');
-            loadingOverlay.classList.add('loading-overlay');
-
-            const spinner = document.createElement('div');
-            spinner.classList.add('loading-spinner');
-
-            const loadingText = document.createElement('div');
-            loadingText.classList.add('loading-text');
-            loadingText.textContent = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
-
-            loadingOverlay.appendChild(spinner);
-            loadingOverlay.appendChild(loadingText);
-            document.body.appendChild(loadingOverlay);
-
-            return loadingOverlay;
-        }
-
-        // 隐藏加载动画
-        function hideLoading(loadingOverlay) {
-            loadingOverlay.style.opacity = '0';
-            loadingOverlay.style.transition = 'opacity 0.3s ease';
-            setTimeout(() => {
-                loadingOverlay.remove();
-            }, 300);
-        }
-
-        // PreloadManager 类定义移到这里，在使用之前
-        class PreloadManager {
-            constructor(imagePaths) {
-                this.imagePaths = imagePaths;
-                this.preloadedImages = new Map();
-                this.currentIndex = 0;
-                this.preloadSize = 3;
-            }
-
-            preloadNext() {
-                const loadingOverlay = showLoading();
-                const promises = [];
-
-                for (let i = 0; i < this.preloadSize; i++) {
-                    const index = (this.currentIndex + i) % this.imagePaths.length;
-                    const path = this.imagePaths[index];
-                    if (!this.preloadedImages.has(path)) {
-                        const promise = new Promise((resolve, reject) => {
-                            const img = new Image();
-                            img.onload = () => resolve(img);
-                            img.onerror = reject;
-                            img.src = path;
-                            this.preloadedImages.set(path, img);
-                        });
-                        promises.push(promise);
-                    }
-                }
-
-                Promise.all(promises)
-                    .then(() => hideLoading(loadingOverlay))
-                    .catch(() => hideLoading(loadingOverlay));
-            }
-
-            getImage(path) {
-                return this.preloadedImages.get(path) || null;
-            }
-
-            advance() {
-                this.currentIndex = (this.currentIndex + 1) % this.imagePaths.length;
-                this.preloadNext();
-            }
-        }
-
-        // 初始化预加载管理器
-        window.addEventListener('DOMContentLoaded', () => {
-            preloadManager = new PreloadManager(shuffledImagePaths);
-            preloadManager.preloadNext();
-
-            // 主题设置初始化也放在这里
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-
-            const themeToggle = document.createElement('button');
-            themeToggle.classList.add('theme-toggle');
-            themeToggle.textContent = savedTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
-            themeToggle.onclick = toggleTheme;
-            document.body.appendChild(themeToggle);
-        });
-
-        function displayImages(page) {
-            const imageList = document.getElementById("image-list");
-            imageList.innerHTML = '';
-
-            const startIndex = (page - 1) * imagesPerPage;
-            const currentImage = shuffledImagePaths[startIndex];
-
-            const imageContainer = document.createElement("div");
-            imageContainer.classList.add("image-container");
-
-            const imageCard = document.createElement("div");
-            imageCard.classList.add("image-card");
-
-            const imageElement = document.createElement("img");
-            // 使用预加载的图片
-            const preloadedImage = preloadManager.getImage(currentImage);
-            imageElement.src = preloadedImage ? preloadedImage.src : currentImage;
-            imageElement.alt = "Meme Image";
-            imageElement.style.width = "100%";
-            imageElement.draggable = false;
-            imageElement.style.animation = 'slideInNext 0.3s forwards';
-            imageCard.appendChild(imageElement);
-
-            // 修改底部提示文案
-            const swipeHint = document.createElement("div");
-            swipeHint.classList.add("swipe-hint");
-            swipeHint.innerHTML = `<span>👈 ${getRandomText(false)}</span><span>${getRandomText(true)} 👉</span>`;
-
-            imageContainer.appendChild(imageCard);
-            imageContainer.appendChild(swipeHint);
-
-            // 添加好笑计数器
-            const funnyCounter = document.createElement("div");
-            funnyCounter.classList.add("funny-counter");
-            funnyCounter.innerHTML = `好笑<span class="count">${funnyCount}</span>张`;
-
-            imageList.appendChild(imageContainer);
-            imageList.appendChild(funnyCounter);
-
-            // 添加事件监听
-            imageContainer.addEventListener('touchstart', handleStart);
-            imageContainer.addEventListener('touchmove', handleMove);
-            imageContainer.addEventListener('touchend', handleEnd);
-            imageContainer.addEventListener('mousedown', handleStart);
-            imageContainer.addEventListener('mousemove', handleMove);
-            imageContainer.addEventListener('mouseup', handleEnd);
-            imageContainer.addEventListener('mouseleave', handleEnd);
-        }
-
-        function handleStart(event) {
-            if (event.type === 'mousedown') {
-                isMouseDown = true;
-                startX = event.clientX;
-                currentX = startX;
-            } else if (event.type === 'touchstart') {
-                startX = event.touches[0].clientX;
-                currentX = startX;
-            }
-        }
-
-        function handleMove(event) {
-            if (event.type === 'mousemove' && !isMouseDown) return;
-
-            const clientX = event.type === 'mousemove' ? event.clientX : event.touches[0].clientX;
-            currentX = clientX;
+        function handleMove(e) {
+            currentX = e.touches[0].clientX;
             const diff = currentX - startX;
-            const imageCard = event.currentTarget.querySelector('.image-card');
-
-            imageCard.style.transform = `translateX(${diff}px)`;
+            const card = document.querySelector('.image-card');
+            card.style.transform = `translateX(${diff}px)`;
         }
 
-        function handleEnd(event) {
-            if (event.type === 'mousemove' && !isMouseDown) return;
-            if (event.type === 'mouseup' || event.type === 'mouseleave') {
-                isMouseDown = false;
-            }
-
+        function handleEnd(e) {
             const diff = currentX - startX;
-            const threshold = window.innerWidth * 0.15;
-            const imageCard = event.currentTarget.querySelector('.image-card');
-
+            const threshold = window.innerWidth * 0.2;
+            
             if (Math.abs(diff) > threshold) {
-                imageCard.classList.add('sliding');
-                imageCard.classList.add(diff > 0 ? 'sliding-right' : 'sliding-left');
-
-                setTimeout(() => {
-                    if (diff > 0) {
-                        nextPage(true);
-                    } else {
-                        nextPage(false);
-                    }
-                }, 300);
-            } else {
-                imageCard.classList.add('sliding');
-                imageCard.style.transform = 'translateX(0)';
-                setTimeout(() => {
-                    imageCard.classList.remove('sliding');
-                }, 200);
-            }
-        }
-
-        function nextPage(liked) {
-            const totalImages = shuffledImagePaths.length;
-            if (currentPage < totalImages) {
-                if (liked) {
+                if (diff > 0 && currentIndex < images.length - 1) {
+                    currentIndex++;
                     funnyCount++;
-                    console.log(getRandomText(true));
-                } else {
-                    console.log(getRandomText(false));
+                    showImage(currentIndex);
+                } else if (diff < 0 && currentIndex > 0) {
+                    currentIndex--;
+                    showImage(currentIndex);
                 }
-
-                currentPage++;
-                preloadManager.advance();
-                displayImages(currentPage);
             } else {
-                shuffledImagePaths = _.shuffle(imagePaths);
-                currentPage = 1;
-                funnyCount = 0;
-                preloadManager = new PreloadManager(shuffledImagePaths);
-                preloadManager.preloadNext();
-                displayImages(currentPage);
+                const card = document.querySelector('.image-card');
+                card.style.transform = 'translateX(0)';
             }
         }
 
-        // 添加主题切换功能
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-
-            // 保存主题设置到本地存储
-            localStorage.setItem('theme', newTheme);
-
-            // 更新按钮文字
-            const themeToggle = document.querySelector('.theme-toggle');
-            themeToggle.textContent = newTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
-        }
-
-        window.onload = function () {
-            displayImages(currentPage);
-        };
+        // 页面加载时自动加载图片
+        window.onload = loadImages;
     </script>
-</head>
-
-<body>
-    <div id="image-list"></div>
 </body>
-
 </html>

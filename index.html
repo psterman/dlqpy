@@ -26,6 +26,21 @@
             transition: background-color 0.3s ease;
         }
 
+        /* 添加龙纹背景 */
+        body::before {
+            content: '龍';
+            position: fixed;
+            font-size: 400px;
+            opacity: 0.03;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: "华文行楷", "楷体", serif;
+            color: var(--text-color);
+            pointer-events: none;
+            z-index: -1;
+        }
+
         /* 保留原有样式 */
         .image-container {
             display: flex;
@@ -43,6 +58,9 @@
             margin: 0 auto;
             cursor: grab;
             user-select: none;
+            border: 2px solid var(--text-color);
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
         }
 
         .image-card img {
@@ -90,17 +108,63 @@
         }
 
         .swipe-hint {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: relative;
+            margin-top: 20px;
+            left: 0;
+            right: 0;
             color: var(--text-color);
-            background-color: var(--counter-bg);
-            padding: 10px 20px;
-            border-radius: 20px;
+            padding: 0 10px;
             display: flex;
+            justify-content: center;
             gap: 20px;
+            cursor: pointer;
+            user-select: none;
+            margin: 0 auto;
+            opacity: 0;
+            animation: fadeIn 0.3s ease-out 0.3s forwards;
+        }
+
+        .swipe-hint span {
+            padding: 5px 10px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            background-color: var(--counter-bg);
+            border: 1px solid var(--text-color);
             box-shadow: 0 2px 10px var(--shadow-color);
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .swipe-hint span:hover {
+            background-color: var(--card-bg);
+            transform: scale(1.05);
+        }
+
+        /* 点击波纹效果 */
+        .swipe-hint span::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: var(--text-color);
+            opacity: 0.2;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .swipe-hint span:active::after {
+            width: 100px;
+            height: 100px;
+        }
+
+        /* 点击缩放效果 */
+        .swipe-hint span:active {
+            transform: scale(0.95);
         }
 
         .theme-toggle {
@@ -118,6 +182,8 @@
             background-color: var(--counter-bg);
             transition: all 0.3s ease;
             min-width: min(120px, 25vw);
+            border: 1px solid var(--text-color);
+            background: linear-gradient(to bottom, var(--counter-bg), var(--card-bg));
         }
 
         .exit-button {
@@ -135,6 +201,8 @@
             background-color: var(--counter-bg);
             transition: all 0.3s ease;
             min-width: min(120px, 25vw);
+            border: 1px solid var(--text-color);
+            background: linear-gradient(to bottom, var(--counter-bg), var(--card-bg));
         }
 
         .exit-button:hover {
@@ -154,6 +222,8 @@
             text-align: center;
             color: var(--text-color);
             z-index: 2000;
+            border: 2px solid var(--text-color);
+            background: linear-gradient(to bottom, var(--card-bg), var(--counter-bg));
         }
 
         .stats-dialog h2 {
@@ -204,10 +274,65 @@
             margin: 20px;
             font-size: 16px;
         }
+
+        /* 修改统计弹窗样式 */
+        .stats-dialog::before {
+            content: '📜';
+            font-size: 24px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        /* 添加页面标题 */
+        .page-title {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: "华文行楷", "楷体", serif;
+            font-size: 24px;
+            color: var(--text-color);
+            opacity: 0.8;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* 添加图片切换动画样式 */
+        @keyframes slideOutLeft {
+            to { 
+                transform: translateX(-100%) rotate(-5deg); 
+                opacity: 0;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            to { 
+                transform: translateX(100%) rotate(5deg); 
+                opacity: 0;
+            }
+        }
+        
+        @keyframes slideIn {
+            from { 
+                transform: translateX(100%); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateX(0); 
+                opacity: 1; 
+            }
+        }
+
+        /* 添加淡入效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 
 <body>
+    <div class="page-title">大佬请批阅</div>
     <div id="image-container"></div>
 
     <script>
@@ -216,6 +341,9 @@
         let funnyCount = 0;
         let images = [];
         let preloadedImages = new Map();  // 用于存储预加载的图片
+        let lastTapTime = 0;
+        let tapCount = 0;
+        let longPressTimer;
 
         // 加载时的舔狗文案
         const loadingTexts = [
@@ -436,61 +564,99 @@
         }
 
         function showImage(index) {
-            imageContainer.innerHTML = '';
+            const oldContainer = document.querySelector('.image-container');
+            if (oldContainer) {
+                // 根据滑动方向选择动画
+                oldContainer.style.animation = `${currentX > startX ? 'slideOutRight' : 'slideOutLeft'} 0.3s forwards`;
+                setTimeout(() => oldContainer.remove(), 300);
+            }
 
-            const container = document.createElement('div');
-            container.className = 'image-container';
+            setTimeout(() => {
+                imageContainer.innerHTML = '';
 
-            const card = document.createElement('div');
-            card.className = 'image-card';
+                const container = document.createElement('div');
+                container.className = 'image-container';
+                container.style.opacity = '0';
+                container.style.animation = 'fadeIn 0.3s ease-out forwards';
 
-            const img = document.createElement('img');
-            // 添加图片加载错误处理
-            img.onerror = () => {
-                // 错误提示文案
-                const errorTexts = [
-                    "这份奏折似乎遗失在宫中了...",
-                    "御前总管偷懒没有及时送达...",
-                    "这份奏折被茶水浸湿了，待朕找太监重新誊抄...",
-                    "这份奏折被昨晚的风吹走了，容奴才去寻找...",
-                    "这份奏折被皇后娘娘拿去垫桌脚了...",
-                    "这份奏折被小太监当成手纸用了...",
-                    "这份奏折被贪玩的小皇子撕了，朕重新找人誊抄...",
-                    "这份奏折被宫女不小心扫进垃圾堆了...",
-                    "这份奏折被粘在一起了，容奴才分开...",
-                    "这份奏折被太监放错地方了，待朕派人找找..."
-                ];
+                const card = document.createElement('div');
+                card.className = 'image-card';
 
-                // 显示错误信息
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'error-message';
-                errorMsg.textContent = errorTexts[Math.floor(Math.random() * errorTexts.length)];
-                card.appendChild(errorMsg);
+                const img = document.createElement('img');
+                // 添加图片加载错误处理
+                img.onerror = () => {
+                    // 错误提示文案
+                    const errorTexts = [
+                        "这份奏折似乎遗失在宫中了...",
+                        "御前总管偷懒没有及时送达...",
+                        "这份奏折被茶水浸湿了，待朕找太监重新誊抄...",
+                        "这份奏折被昨晚的风吹走了，容奴才去寻找...",
+                        "这份奏折被皇后娘娘拿去垫桌脚了...",
+                        "这份奏折被小太监当成手纸用了...",
+                        "这份奏折被贪玩的小皇子撕了，朕重新找人誊抄...",
+                        "这份奏折被宫女不小心扫进垃圾堆了...",
+                        "这份奏折被粘在一起了，容奴才分开...",
+                        "这份奏折被太监放错地方了，待朕派人找找..."
+                    ];
 
-                // 显示下一张按钮
-                const nextButton = document.createElement('button');
-                nextButton.className = 'next-button';
-                nextButton.textContent = '下一份奏折';
-                nextButton.onclick = () => {
+                    // 显示错误信息
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message';
+                    errorMsg.textContent = errorTexts[Math.floor(Math.random() * errorTexts.length)];
+                    card.appendChild(errorMsg);
+
+                    // 显示下一张按钮
+                    const nextButton = document.createElement('button');
+                    nextButton.className = 'next-button';
+                    nextButton.textContent = '下一份奏折';
+                    nextButton.onclick = () => {
+                        currentIndex++;
+                        showImage(currentIndex);
+                        checkAndResetImages();
+                    };
+                    document.body.appendChild(nextButton);
+                };
+
+                // 使用预加载的图片（如果有）
+                const currentImage = images[index];
+                if (preloadedImages.has(currentImage.url)) {
+                    img.src = preloadedImages.get(currentImage.url).src;
+                } else {
+                    img.src = currentImage.url;
+                }
+                img.alt = images[index].name;
+
+                card.appendChild(img);
+                container.appendChild(card);
+                
+                // 添加滑动提示（在图片下方）
+                const hint = document.createElement('div');
+                hint.className = 'swipe-hint';
+                
+                const leftSpan = document.createElement('span');
+                leftSpan.className = 'left-button';
+                leftSpan.innerHTML = `👈 ${getRandomText(false)}`;
+                leftSpan.onclick = () => {
                     currentIndex++;
                     showImage(currentIndex);
                     checkAndResetImages();
                 };
-                document.body.appendChild(nextButton);
-            };
-
-            // 使用预加载的图片（如果有）
-            const currentImage = images[index];
-            if (preloadedImages.has(currentImage.url)) {
-                img.src = preloadedImages.get(currentImage.url).src;
-            } else {
-                img.src = currentImage.url;
-            }
-            img.alt = images[index].name;
-
-            card.appendChild(img);
-            container.appendChild(card);
-            imageContainer.appendChild(container);
+                
+                const rightSpan = document.createElement('span');
+                rightSpan.className = 'right-button';
+                rightSpan.innerHTML = `${getRandomText(true)} 👉`;
+                rightSpan.onclick = () => {
+                    currentIndex++;
+                    funnyCount++;
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                };
+                
+                hint.appendChild(leftSpan);
+                hint.appendChild(rightSpan);
+                container.appendChild(hint);
+                imageContainer.appendChild(container);
+            }, oldContainer ? 250 : 0);
 
             // 移除旧的下一张按钮（如果存在）
             const oldNextButton = document.querySelector('.next-button');
@@ -503,12 +669,6 @@
             if (oldHint) {
                 oldHint.remove();
             }
-
-            // 添加滑动提示
-            const hint = document.createElement('div');
-            hint.className = 'swipe-hint';
-            hint.innerHTML = `<span>👈 ${getRandomText(false)}</span><span>${getRandomText(true)} 👉</span>`;
-            document.body.appendChild(hint);
         }
 
         function getRandomText(isLike) {
@@ -583,10 +743,33 @@
         imageContainer.addEventListener('mouseleave', handleMouseEnd);
 
         function handleStart(e) {
+            const currentTime = Date.now();
+            if (currentTime - lastTapTime < 300) {
+                // 双击检测
+                tapCount++;
+                if (tapCount === 2) {
+                    // 双击喜欢
+                    currentIndex++;
+                    funnyCount++;
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                    tapCount = 0;
+                    return;
+                }
+            } else {
+                tapCount = 1;
+            }
+            lastTapTime = currentTime;
+
             startX = e.touches[0].clientX;
             currentX = startX;
             startTime = Date.now();
             isMoving = true;
+
+            longPressTimer = setTimeout(() => {
+                // 长按显示大图或其他操作
+                showFullscreenImage(images[currentIndex]);
+            }, 500);
         }
 
         function handleMouseStart(e) {
@@ -611,53 +794,103 @@
         function handleMouseMove(e) {
             if (!isMouseDown) return;
             e.preventDefault();  // 防止拖动时选中文本
-
+            e.stopPropagation(); // 阻止事件冒泡
+            
             currentX = e.clientX;
             const diff = currentX - startX;
             const card = document.querySelector('.image-card');
-            card.style.transform = `translateX(${diff}px)`;
+            if (card) {
+                card.style.transform = `translateX(${diff}px)`;
+            }
         }
 
         function handleEnd(e) {
-            if (!isMoving) return;  // 如果不是滑动状态，直接返回
+            // 如果不是滑动状态或没有移动，直接返回
+            if (!isMoving || currentX === startX) return;
             isMoving = false;
 
             const diff = currentX - startX;
             const threshold = window.innerWidth * 0.2;
             const timeElapsed = Date.now() - startTime;
-            const velocity = Math.abs(diff) / timeElapsed;  // 计算滑动速度
-
-            if (Math.abs(diff) > threshold || (Math.abs(diff) > 50 && velocity > 0.5)) {
+            const velocity = Math.abs(diff) / Math.max(timeElapsed, 1);
+            
+            // 降低滑动阈值，使鼠标操作更容易触发
+            if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
                 if (diff > 0) {  // 右滑表示喜欢
                     currentIndex++;
                     funnyCount++;
-                    showImage(currentIndex);
                 } else {  // 左滑表示不喜欢
                     currentIndex++;
-                    showImage(currentIndex);
                 }
-                checkAndResetImages();
+                // 添加动画效果
+                const card = document.querySelector('.image-card');
+                if (card) {
+                    card.style.transition = 'transform 0.2s ease-out';
+                    card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
+                    setTimeout(() => {
+                        showImage(currentIndex);
+                        checkAndResetImages();
+                    }, 200);
+                }
             } else {
                 // 恢复原位的动画
                 const card = document.querySelector('.image-card');
-                card.style.transition = 'transform 0.2s ease-out';
-                card.style.transform = 'translateX(0)';
-                setTimeout(() => {
-                    card.style.transition = '';
-                }, 200);
+                if (card) {
+                    card.style.transition = 'transform 0.2s ease-out';
+                    card.style.transform = 'translateX(0)';
+                    setTimeout(() => {
+                        card.style.transition = '';
+                    }, 200);
+                }
             }
+
+            clearTimeout(longPressTimer);
         }
 
         function handleMouseEnd(e) {
             if (!isMouseDown) return;
             isMouseDown = false;
             isMoving = false;
-
+            
             // 恢复默认鼠标样式
             const card = document.querySelector('.image-card');
-            card.style.cursor = 'grab';
-
-            handleEnd(e);
+            if (card) {
+                card.style.cursor = 'grab';
+            }
+            
+            // 处理鼠标滑动结束
+            const diff = e.clientX - startX;
+            const threshold = window.innerWidth * 0.2;
+            const timeElapsed = Date.now() - startTime;
+            const velocity = Math.abs(diff) / Math.max(timeElapsed, 1);
+            
+            // 降低滑动阈值，使鼠标操作更容易触发
+            if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
+                if (diff > 0) {  // 右滑表示喜欢
+                    currentIndex++;
+                    funnyCount++;
+                } else {  // 左滑表示不喜欢
+                    currentIndex++;
+                }
+                // 添加动画效果
+                if (card) {
+                    card.style.transition = 'transform 0.2s ease-out';
+                    card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
+                    setTimeout(() => {
+                        showImage(currentIndex);
+                        checkAndResetImages();
+                    }, 200);
+                }
+            } else {
+                // 恢复原位的动画
+                if (card) {
+                    card.style.transition = 'transform 0.2s ease-out';
+                    card.style.transform = 'translateX(0)';
+                    setTimeout(() => {
+                        card.style.transition = '';
+                    }, 200);
+                }
+            }
         }
 
         // 预加载下一张图片
@@ -738,7 +971,8 @@
                 爱卿共览奏折 ${viewedImages} 篇<br>
                 其中令朕龙颜大悦者 ${funnyCount} 篇<br>
                 龙心悦指数：${Math.round(funnyRate)}%<br><br>
-                <strong>${getEvaluationText(funnyRate)}</strong>
+                <strong>${getEvaluationText(funnyRate)}</strong><br><br>
+                <span style="font-size: 0.9em; opacity: 0.8;">小弟微信：hovgod</span>
             `;
 
             const confirmButton = document.createElement('button');
@@ -776,7 +1010,7 @@
             // 添加退出按钮
             const exitButton = document.createElement('button');
             exitButton.className = 'exit-button';
-            exitButton.textContent = '退出';
+            exitButton.textContent = '退朝';
             exitButton.onclick = showExitStats;
             document.body.appendChild(exitButton);
         });
@@ -798,6 +1032,36 @@
                 e.stopPropagation();
             }
         });
+
+        // 防止图片拖拽
+        imageContainer.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+        });
+
+        function showFullscreenImage(image) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+            `;
+            
+            const img = document.createElement('img');
+            img.src = image.url;
+            img.style.maxWidth = '95vw';
+            img.style.maxHeight = '95vh';
+            
+            overlay.onclick = () => overlay.remove();
+            overlay.appendChild(img);
+            document.body.appendChild(overlay);
+        }
     </script>
 </body>
 

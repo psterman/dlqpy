@@ -4,6 +4,27 @@
     <title>大佬请批阅</title>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --card-bg: #fff;
+            --text-color: #666;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --counter-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --counter-bg: rgba(45, 45, 45, 0.9);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            transition: background-color 0.3s ease;
+        }
+
         /* 保留原有样式 */
         .image-container {
             display: flex;
@@ -19,6 +40,8 @@
             padding: 15px;
             max-width: 90%;
             margin: 0 auto;
+            cursor: grab;
+            user-select: none;
         }
 
         .image-card img {
@@ -43,6 +66,114 @@
             cursor: pointer;
             z-index: 1000;
         }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-text {
+            color: var(--text-color);
+            font-size: 18px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .swipe-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--text-color);
+            background-color: var(--counter-bg);
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: flex;
+            gap: 20px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: min(15px, 3vw) min(20px, 4vw);
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            z-index: 1000;
+            font-size: min(16px, 4vw);
+            border: none;
+            color: var(--text-color);
+            background-color: var(--counter-bg);
+            transition: all 0.3s ease;
+            min-width: min(120px, 25vw);
+        }
+
+        .exit-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: min(15px, 3vw) min(20px, 4vw);
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            z-index: 1000;
+            font-size: min(16px, 4vw);
+            border: none;
+            color: var(--text-color);
+            background-color: var(--counter-bg);
+            transition: all 0.3s ease;
+            min-width: min(120px, 25vw);
+        }
+
+        .exit-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px var(--shadow-color);
+        }
+
+        .stats-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            text-align: center;
+            color: var(--text-color);
+            z-index: 2000;
+        }
+
+        .stats-dialog h2 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+
+        .stats-dialog button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background-color: var(--counter-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .stats-dialog button:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -53,6 +184,169 @@
         let currentIndex = 0;
         let funnyCount = 0;
         let images = [];
+        let preloadedImages = new Map();  // 用于存储预加载的图片
+
+        // 加载时的舔狗文案
+        const loadingTexts = [
+            "奴才正在为皇上准备奏折...",
+            "小的正在整理御览资料...",
+            "奴才斗胆为陛下筛选...",
+            "恳请圣上稍候片刻...",
+            "奴才正在诚惶诚恐地准备...",
+            "容奴才为陛下精选...",
+            "奴才正在战战兢兢地整理...",
+            "请容奴才为圣上过目...",
+            "奴才正在为万岁爷准备...",
+            "小的不敢怠慢，马上呈上...",
+            "奴才正在用心准备...",
+            "恳请陛下稍作休息...",
+            "奴才正在为圣上效劳...",
+            "容奴才为陛下筛选精品...",
+            "小的正在竭尽全力准备...",
+            "奴才正在为皇上精心挑选...",
+            "请容奴才再做细选...",
+            "万岁爷请稍候，马上呈上...",
+            "奴才正在为陛下忙碌...",
+            "小的不敢懈怠，即刻呈递...",
+            "恳请圣上稍作歇息...",
+            "奴才正在为陛下效命...",
+            "容小的为皇上准备...",
+            "奴才正在为万岁爷甄选...",
+            "请容奴才为圣上整理...",
+            "小的正在为陛下忙活...",
+            "奴才正在为皇上筛选...",
+            "恳请万岁爷稍等片刻...",
+            "奴才正在为圣上准备...",
+            "容小的为陛下效劳...",
+            "奴才正在为皇上整理...",
+            "请容奴才为万岁爷准备...",
+            "小的正在为圣上筛选...",
+            "奴才正在为陛下甄选...",
+            "恳请皇上稍作休息...",
+            "奴才正在为圣上忙碌...",
+            "容小的为万岁爷效劳...",
+            "奴才正在为陛下准备...",
+            "请容奴才为皇上整理...",
+            "小的正在为圣上效命...",
+            "奴才正在为万岁爷筛选...",
+            "恳请陛下稍候片刻...",
+            "奴才正在为皇上甄选...",
+            "容小的为圣上效劳...",
+            "奴才正在为陛下整理...",
+            "请容奴才为万岁爷准备...",
+            "小的正在为圣上筛选...",
+            "奴才正在为皇上效命...",
+            "恳请万岁爷稍等片刻...",
+            "奴才正在为陛下忙活..."
+        ];
+
+        // 左滑文案
+        const dislikeTexts = [
+            "朕已阅",
+            "退下吧",
+            "不准奏",
+            "无趣",
+            "枯燥",
+            "乏味",
+            "朕不悦",
+            "荒谬",
+            "胡闹",
+            "放肆",
+            "大胆",
+            "荒唐",
+            "糊涂",
+            "不知所谓",
+            "岂有此理",
+            "朕累了",
+            "朕乏了",
+            "朕倦了",
+            "下一个",
+            "不值一看",
+            "休得胡言",
+            "简直可笑",
+            "无稽之谈",
+            "朕不想看",
+            "太过无聊",
+            "难登大雅",
+            "不知天高地厚",
+            "不知分寸",
+            "太过草率",
+            "朕看不下去了",
+            "有辱斯文",
+            "贻笑大方",
+            "不知检点",
+            "不堪入目",
+            "朕甚失望",
+            "不知悔改",
+            "不知进退",
+            "不知轻重",
+            "不知好歹",
+            "不知羞耻",
+            "朕心烦了",
+            "朕不准",
+            "朕不许",
+            "朕不要",
+            "着实无趣",
+            "甚是无味",
+            "令朕生厌",
+            "令朕不快",
+            "令朕反感",
+            "令朕作呕"
+        ];
+
+        // 右滑文案
+        const likeTexts = [
+            "龙颜大悦",
+            "准奏",
+            "甚好",
+            "不错",
+            "有趣",
+            "妙哉",
+            "爱卿说得好",
+            "朕很欣慰",
+            "可",
+            "准",
+            "御笔亲批",
+            "朕准了",
+            "甚妙",
+            "妙不可言",
+            "深得朕心",
+            "朕很满意",
+            "善",
+            "极好",
+            "朕笑了",
+            "卿家有才",
+            "果然精彩",
+            "深得朕意",
+            "朕甚欢喜",
+            "妙笔生花",
+            "才思敏捷",
+            "朕要重赏",
+            "卿家妙极",
+            "真乃大才",
+            "朕要多看几遍",
+            "传朕旨意",
+            "朕龙心大悦",
+            "妙不可言",
+            "绝妙好辞",
+            "朕准了",
+            "甚合朕意",
+            "爱卿用心了",
+            "朕很喜欢",
+            "可圈可点",
+            "令朕开怀",
+            "妙趣横生",
+            "朕要赏赐",
+            "朕要嘉奖",
+            "朕要褒奖",
+            "朕要表彰",
+            "朕要夸赞",
+            "朕心甚悦",
+            "朕意甚慰",
+            "朕心大快",
+            "朕意大畅",
+            "朕心舒畅"
+        ];
 
         // 使用 GitHub API 获取仓库中 pic 文件夹的内容
         const owner = 'psterman';
@@ -60,6 +354,7 @@
         const path = 'pic';
         
         async function loadImages() {
+            const loadingOverlay = showLoading();
             try {
                 const response = await fetch(
                     `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
@@ -77,11 +372,36 @@
 
                 if (images.length > 0) {
                     images = _.shuffle(images);
+                    // 预加载第一张图片
+                    const firstImage = new Image();
+                    firstImage.src = images[0].url;
+                    preloadedImages.set(images[0].url, firstImage);
+                    // 预加载第二张图片
+                    preloadNextImage(0);
                     showImage(0);
                 }
-            } catch (error) {
-                console.error('加载图片失败:', error);
+            } finally {
+                hideLoading(loadingOverlay);
             }
+        }
+
+        function showLoading() {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            
+            const text = document.createElement('div');
+            text.className = 'loading-text';
+            text.textContent = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
+            
+            overlay.appendChild(text);
+            document.body.appendChild(overlay);
+            return overlay;
+        }
+
+        function hideLoading(overlay) {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => overlay.remove(), 300);
         }
 
         function showImage(index) {
@@ -94,29 +414,82 @@
             card.className = 'image-card';
             
             const img = document.createElement('img');
-            img.src = images[index].url;
+            // 使用预加载的图片（如果有）
+            const currentImage = images[index];
+            if (preloadedImages.has(currentImage.url)) {
+                img.src = preloadedImages.get(currentImage.url).src;
+            } else {
+                img.src = currentImage.url;
+            }
             img.alt = images[index].name;
             
             card.appendChild(img);
             container.appendChild(card);
             imageContainer.appendChild(container);
+
+            // 预加载下一张图片
+            preloadNextImage(index);
+
+            // 移除旧的滑动提示（如果存在）
+            const oldHint = document.querySelector('.swipe-hint');
+            if (oldHint) {
+                oldHint.remove();
+            }
+
+            // 添加滑动提示
+            const hint = document.createElement('div');
+            hint.className = 'swipe-hint';
+            hint.innerHTML = `<span>👈 ${getRandomText(false)}</span><span>${getRandomText(true)} 👉</span>`;
+            document.body.appendChild(hint);
+        }
+
+        function getRandomText(isLike) {
+            const texts = isLike ? likeTexts : dislikeTexts;
+            return texts[Math.floor(Math.random() * texts.length)];
         }
 
         // 添加左右滑动处理
         let startX = 0;
         let currentX = 0;
+        let isMouseDown = false;  // 添加鼠标按下状态标记
 
         imageContainer.addEventListener('touchstart', handleStart);
         imageContainer.addEventListener('touchmove', handleMove);
         imageContainer.addEventListener('touchend', handleEnd);
+        
+        // 添加鼠标事件监听
+        imageContainer.addEventListener('mousedown', handleMouseStart);
+        imageContainer.addEventListener('mousemove', handleMouseMove);
+        imageContainer.addEventListener('mouseup', handleMouseEnd);
+        imageContainer.addEventListener('mouseleave', handleMouseEnd);
 
         function handleStart(e) {
             startX = e.touches[0].clientX;
             currentX = startX;
         }
 
+        function handleMouseStart(e) {
+            isMouseDown = true;
+            startX = e.clientX;
+            currentX = startX;
+            
+            // 添加拖动时的鼠标样式
+            const card = document.querySelector('.image-card');
+            card.style.cursor = 'grabbing';
+        }
+
         function handleMove(e) {
             currentX = e.touches[0].clientX;
+            const diff = currentX - startX;
+            const card = document.querySelector('.image-card');
+            card.style.transform = `translateX(${diff}px)`;
+        }
+
+        function handleMouseMove(e) {
+            if (!isMouseDown) return;
+            e.preventDefault();  // 防止拖动时选中文本
+            
+            currentX = e.clientX;
             const diff = currentX - startX;
             const card = document.querySelector('.image-card');
             card.style.transform = `translateX(${diff}px)`;
@@ -127,22 +500,168 @@
             const threshold = window.innerWidth * 0.2;
             
             if (Math.abs(diff) > threshold) {
-                if (diff > 0 && currentIndex < images.length - 1) {
+                if (diff > 0) {  // 右滑表示喜欢
                     currentIndex++;
                     funnyCount++;
                     showImage(currentIndex);
-                } else if (diff < 0 && currentIndex > 0) {
-                    currentIndex--;
+                } else {  // 左滑表示不喜欢
+                    currentIndex++;
                     showImage(currentIndex);
                 }
             } else {
                 const card = document.querySelector('.image-card');
                 card.style.transform = 'translateX(0)';
             }
+            
+            // 如果已经看完所有图片，重新打乱顺序开始
+            if (currentIndex >= images.length) {
+                images = _.shuffle(images);
+                currentIndex = 0;
+                showImage(currentIndex);
+            }
         }
 
-        // 页面加载时自动加载图片
-        window.onload = loadImages;
+        function handleMouseEnd(e) {
+            if (!isMouseDown) return;
+            isMouseDown = false;
+            
+            // 恢复默认鼠标样式
+            const card = document.querySelector('.image-card');
+            card.style.cursor = 'grab';
+            
+            handleEnd(e);
+        }
+
+        // 预加载下一张图片
+        function preloadNextImage(index) {
+            const nextIndex = (index + 1) % images.length;
+            const nextImage = images[nextIndex];
+            
+            if (!preloadedImages.has(nextImage.url)) {
+                const img = new Image();
+                img.src = nextImage.url;
+                preloadedImages.set(nextImage.url, img);
+            }
+        }
+
+        // 添加退出按钮和统计功能
+        function showExitStats() {
+            // 根据笑话指数选择不同的评价文案
+            function getEvaluationText(funnyRate) {
+                const evaluations = [
+                    // 0-20% 评价
+                    [
+                        "朕看你品味独特，难得糊涂啊",
+                        "爱卿的幽默感需要朕亲自调教",
+                        "这就是你的笑点？朕很担忧啊",
+                        "看来爱卿与朕的品味相去甚远",
+                        "你这审美，朕很是费解啊"
+                    ],
+                    // 21-40% 评价
+                    [
+                        "勉强及格，还需努力啊",
+                        "朕对你的表现不甚满意",
+                        "爱卿的眼光尚需提升",
+                        "朕觉得你可以做得更好",
+                        "有进步空间，继续努力"
+                    ],
+                    // 41-60% 评价
+                    [
+                        "不错不错，朕很欣慰",
+                        "爱卿的品味渐入佳境",
+                        "看来你与朕心有灵犀",
+                        "朕对你的表现还算满意",
+                        "继续保持，不要骄傲"
+                    ],
+                    // 61-80% 评价
+                    [
+                        "很好，深得朕心啊",
+                        "爱卿果然懂得朕的心意",
+                        "朕看你很有慧根",
+                        "不愧是朕看中的人才",
+                        "甚合朕意，甚合朕意"
+                    ],
+                    // 81-100% 评价
+                    [
+                        "绝了！朕要重重赏赐你",
+                        "卿乃朕之知己也",
+                        "朕要封你为首席笑话鉴赏官",
+                        "爱卿与朕真是心有灵犀",
+                        "朕要把你调到御前侍奉"
+                    ]
+                ];
+                
+                const index = Math.min(Math.floor(funnyRate / 20), 4);
+                const texts = evaluations[index];
+                return texts[Math.floor(Math.random() * texts.length)];
+            }
+
+            const dialog = document.createElement('div');
+            dialog.className = 'stats-dialog';
+            
+            const title = document.createElement('h2');
+            title.textContent = '御览统计';
+            
+            const content = document.createElement('p');
+            const totalImages = images.length;
+            const viewedImages = currentIndex + 1;
+            const funnyRate = (funnyCount / viewedImages) * 100;
+            content.innerHTML = `
+                爱卿共览奏折 ${viewedImages} 篇<br>
+                其中令朕龙颜大悦者 ${funnyCount} 篇<br>
+                龙心悦指数：${Math.round(funnyRate)}%<br><br>
+                <strong>${getEvaluationText(funnyRate)}</strong>
+            `;
+            
+            const confirmButton = document.createElement('button');
+            confirmButton.textContent = '朕知道了';
+            confirmButton.onclick = () => {
+                window.close();
+                // 如果window.close()不起作用，提供返回上一页的选项
+                if (window.location.href === document.referrer) {
+                    window.location.href = '/';
+                } else {
+                    window.history.back();
+                }
+            };
+            
+            dialog.appendChild(title);
+            dialog.appendChild(content);
+            dialog.appendChild(confirmButton);
+            document.body.appendChild(dialog);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // 启动图片加载
+            loadImages();
+            
+            // 主题设置初始化
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            const themeToggle = document.createElement('button');
+            themeToggle.className = 'theme-toggle';
+            themeToggle.textContent = savedTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
+            themeToggle.onclick = toggleTheme;
+            document.body.appendChild(themeToggle);
+
+            // 添加退出按钮
+            const exitButton = document.createElement('button');
+            exitButton.className = 'exit-button';
+            exitButton.textContent = '退出';
+            exitButton.onclick = showExitStats;
+            document.body.appendChild(exitButton);
+        });
+
+        // 主题切换功能
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            const themeToggle = document.querySelector('.theme-toggle');
+            themeToggle.textContent = newTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
+        }
     </script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>匿名梗图网站</title>
+    <title>大佬请批阅</title>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
@@ -22,6 +22,13 @@
             flex-direction: column;
             align-items: center;
             margin-bottom: 50px;
+            position: relative;
+            touch-action: pan-y pinch-zoom;
+            cursor: grab;
+        }
+
+        .image-container:active {
+            cursor: grabbing;
         }
 
         .image-card {
@@ -31,6 +38,12 @@
             padding: 15px;
             max-width: 90%;
             margin: 0 auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+        .image-card.sliding {
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .image-card img {
@@ -64,7 +77,44 @@
         }
 
         .page-info {
-            margin: 0 15px;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .swipe-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .funny-counter {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            color: #666;
+        }
+
+        .funny-counter .count {
+            color: #ff6b6b;
+            font-weight: bold;
+            margin-left: 5px;
         }
     </style>
     <script>
@@ -295,7 +345,7 @@
             "pic/008HL3Tkly1hykgdl0ifjj30u01uogty.jpg",
             "pic/008HL3Tkly1hykgdyd0h8j30u01hqtj4.jpg",
             "pic/008HL3Tkly1hykge9aksij30u01ha7dh.jpg",
-            "pic/008HL3Tkly1hykggeddzfj30u01hc7f9.jpg",
+            "pic/008HL3Tkly1hykgeddzfj30u01hc7f9.jpg",
             "pic/008HL3Tkly1hykghgg7mej30m80m80ws.jpg",
             "pic/008HL3Tkly1hykgkwjo7fj30kg0qo40n.jpg",
             "pic/008HL3Tkly1hykgzb6clmj30o01hcq8o.jpg",
@@ -452,61 +502,132 @@
         ];
 
         let currentPage = 1;
-        const imagesPerPage = 10;
+        const imagesPerPage = 1;
         let shuffledImagePaths = _.shuffle(imagePaths);
+        let isMouseDown = false;
+        let startX = 0;
+        let currentX = 0;
+        let funnyCount = 0;
 
         function displayImages(page) {
             const imageList = document.getElementById("image-list");
-            imageList.innerHTML = ''; // 清空当前显示的图片
+            imageList.innerHTML = '';
 
             const startIndex = (page - 1) * imagesPerPage;
-            const endIndex = startIndex + imagesPerPage;
-            const currentImages = shuffledImagePaths.slice(startIndex, endIndex);
+            const currentImage = shuffledImagePaths[startIndex];
 
-            currentImages.forEach(imagePath => {
-                const imageContainer = document.createElement("div");
-                imageContainer.classList.add("image-container");
+            const imageContainer = document.createElement("div");
+            imageContainer.classList.add("image-container");
 
-                const imageCard = document.createElement("div");
-                imageCard.classList.add("image-card");
+            const imageCard = document.createElement("div");
+            imageCard.classList.add("image-card");
 
-                const imageElement = document.createElement("img");
-                imageElement.src = imagePath;
-                imageElement.alt = "Meme Image";
-                imageElement.style.width = "100%";
-                imageCard.appendChild(imageElement);
+            const imageElement = document.createElement("img");
+            imageElement.src = currentImage;
+            imageElement.alt = "Meme Image";
+            imageElement.style.width = "100%";
+            imageElement.draggable = false; // 防止图片被拖拽
+            imageCard.appendChild(imageElement);
 
-                imageContainer.appendChild(imageCard);
-                imageList.appendChild(imageContainer);
-            });
+            imageContainer.appendChild(imageCard);
+            imageList.appendChild(imageContainer);
 
-            updatePagination();
+            // 添加滑动提示
+            const swipeHint = document.createElement("div");
+            swipeHint.classList.add("swipe-hint");
+            swipeHint.textContent = "左滑不好笑 | 右滑好笑 👉";
+            imageList.appendChild(swipeHint);
+
+            // 添加好笑计数器
+            const funnyCounter = document.createElement("div");
+            funnyCounter.classList.add("funny-counter");
+            funnyCounter.innerHTML = `好笑<span class="count">${funnyCount}</span>张`;
+            imageList.appendChild(funnyCounter);
+
+            // 添加触摸事件监听
+            imageContainer.addEventListener('touchstart', handleStart);
+            imageContainer.addEventListener('touchmove', handleMove);
+            imageContainer.addEventListener('touchend', handleEnd);
+
+            // 添加鼠标事件监听
+            imageContainer.addEventListener('mousedown', handleStart);
+            imageContainer.addEventListener('mousemove', handleMove);
+            imageContainer.addEventListener('mouseup', handleEnd);
+            imageContainer.addEventListener('mouseleave', handleEnd);
         }
 
-        function updatePagination() {
-            const totalPages = Math.ceil(shuffledImagePaths.length / imagesPerPage);
-            const paginationContainer = document.getElementById("pagination");
-            paginationContainer.innerHTML = `
-                <button onclick="prevPage()" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
-                <span class="page-info">第 ${currentPage} 页 / 共 ${totalPages} 页</span>
-                <button onclick="nextPage()" ${currentPage === totalPages ? 'disabled' : ''}>下一页</button>
-            `;
-        }
-
-        function prevPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                displayImages(currentPage);
-                window.scrollTo(0, 0); // 回到顶部
+        function handleStart(event) {
+            if (event.type === 'mousedown') {
+                isMouseDown = true;
+                startX = event.clientX;
+                currentX = startX;
+            } else if (event.type === 'touchstart') {
+                startX = event.touches[0].clientX;
+                currentX = startX;
             }
         }
 
-        function nextPage() {
-            const totalPages = Math.ceil(shuffledImagePaths.length / imagesPerPage);
-            if (currentPage < totalPages) {
+        function handleMove(event) {
+            if (event.type === 'mousemove' && !isMouseDown) return;
+
+            const clientX = event.type === 'mousemove' ? event.clientX : event.touches[0].clientX;
+            currentX = clientX;
+            const diff = currentX - startX;
+            const imageCard = event.currentTarget.querySelector('.image-card');
+
+            requestAnimationFrame(() => {
+                imageCard.style.transform = `translateX(${diff}px)`;
+            });
+        }
+
+        function handleEnd(event) {
+            if (event.type === 'mousemove' && !isMouseDown) return;
+            if (event.type === 'mouseup' || event.type === 'mouseleave') {
+                isMouseDown = false;
+            }
+
+            const diff = currentX - startX;
+            const threshold = window.innerWidth * 0.2;
+            const imageCard = event.currentTarget.querySelector('.image-card');
+
+            if (Math.abs(diff) > threshold) {
+                imageCard.classList.add('sliding');
+                const direction = diff > 0 ? 1 : -1;
+                imageCard.style.transform = `translateX(${direction * window.innerWidth}px)`;
+
+                setTimeout(() => {
+                    if (diff > 0) {
+                        nextPage(true);
+                    } else {
+                        nextPage(false);
+                    }
+                }, 300);
+            } else {
+                imageCard.classList.add('sliding');
+                imageCard.style.transform = 'translateX(0)';
+                setTimeout(() => {
+                    imageCard.classList.remove('sliding');
+                }, 300);
+            }
+        }
+
+        function nextPage(liked) {
+            const totalImages = shuffledImagePaths.length;
+            if (currentPage < totalImages) {
+                if (liked) {
+                    funnyCount++;
+                    console.log('用户觉得好笑');
+                } else {
+                    console.log('用户觉得不好笑');
+                }
+
                 currentPage++;
                 displayImages(currentPage);
-                window.scrollTo(0, 0); // 回到顶部
+            } else {
+                shuffledImagePaths = _.shuffle(imagePaths);
+                currentPage = 1;
+                funnyCount = 0; // 重置好笑计数
+                displayImages(currentPage);
             }
         }
 

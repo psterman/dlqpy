@@ -4,10 +4,6 @@
 <head>
     <title>大佬请批阅</title>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
-    <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
-    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.6.1/dist/av-min.js"></script>
     <style>
         .image-container {
             display: flex;
@@ -504,12 +500,12 @@
             imageContainer.appendChild(leftHint);
             imageContainer.appendChild(imageCard);
             imageContainer.appendChild(rightHint);
-            
+
             // 添加好笑计数器
             const funnyCounter = document.createElement("div");
             funnyCounter.classList.add("funny-counter");
             funnyCounter.innerHTML = `好笑<span class="count">${funnyCount}</span>张`;
-            
+
             imageList.appendChild(imageContainer);
             imageList.appendChild(funnyCounter);
 
@@ -601,28 +597,6 @@
         window.onload = function () {
             displayImages(currentPage);
         };
-
-        // 配置微信分享
-        wx.config({
-            debug: false,
-            appId: 'YOUR_APP_ID',
-            timestamp: 'YOUR_TIMESTAMP',
-            nonceStr: 'YOUR_NONCE_STR',
-            signature: 'YOUR_SIGNATURE',
-            jsApiList: ['updateAppMessageShareData', 'updateTimelineShareData']
-        });
-
-        // 设置分享内容
-        wx.ready(function () {
-            var shareData = {
-                title: '匿名梗图网站',
-                desc: '24小时随机不重复浏览有趣的梗图,快来看看吧!',
-                link: window.location.href,
-                imgUrl: document.getElementById('meme-image').src
-            };
-            wx.updateAppMessageShareData(shareData);
-            wx.updateTimelineShareData(shareData);
-        });
     </script>
 </head>
 

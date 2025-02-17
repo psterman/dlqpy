@@ -471,7 +471,8 @@
         let funnyCount = 0;
         let images = [];
         let preloadedImages = new Map();
-        const MAX_CACHED_IMAGES = 30;  // 增加缓存数量，因为图片较小
+        const MAX_CACHED_IMAGES = 50;  // 增加缓存数量
+        let isLoading = false;  // 添加加载状态标记
         let lastTapTime = 0;
         let tapCount = 0;
         let longPressTimer;
@@ -646,57 +647,33 @@
         async function loadImages() {
             const loadingOverlay = showLoading();
             try {
-                // 测试 CDN 和原始 URL 的响应时间
-                async function testImageLoadTime(url) {
-                    const start = performance.now();
-                    const img = new Image();
-                    await new Promise((resolve, reject) => {
-                        img.onload = resolve;
-                        img.onerror = reject;
-                        img.src = url;
-                    });
-                    return performance.now() - start;
-                }
-
                 const response = await fetch(
                     `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
                 );
 
                 const files = await response.json();
-                const firstImage = files[0];
-                
-                // 测试两个地址的加载时间
-                const githubUrl = firstImage.download_url;
-                const cdnUrl = `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${firstImage.name}`;
-                
-                const [githubTime, cdnTime] = await Promise.all([
-                    testImageLoadTime(githubUrl),
-                    testImageLoadTime(cdnUrl)
-                ]);
-
-                // 选择响应更快的 URL 模式
-                const useGithub = githubTime < cdnTime;
-                console.log(`GitHub: ${githubTime}ms, CDN: ${cdnTime}ms`);
-
                 images = files
                     .filter(file => file.name.match(/\.(jpg|jpeg|png|gif)$/i))
                     .map(file => ({
-                        url: useGithub ? file.download_url : 
-                            `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
+                        // 直接使用完整尺寸的图片URL
+                        url: `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}?v=${Date.now()}`,
+                        backupUrl: `https://fastly.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
                         name: file.name
                     }));
 
                 if (images.length > 0) {
-                    const preloadBatch = 3;  // 减少初始预加载数量
+                    const preloadBatch = 5;
                     const imagePromises = [];
 
                     for (let i = 0; i < Math.min(preloadBatch, images.length); i++) {
                         const img = new Image();
-                        img.decoding = i === 0 ? 'sync' : 'async';  // 只同步加载第一张
-                        img.fetchPriority = i < 5 ? 'high' : 'low';
+                        // 移除解码和优先级限制
                         const promise = new Promise((resolve) => {
                             img.onload = resolve;
-                            img.loading = i === 0 ? 'eager' : 'lazy';  // 只立即加载第一张
+                            img.onerror = () => {
+                                console.log(`Switching to backup CDN for ${images[i].name}`);
+                                img.src = images[i].backupUrl;
+                            };
                             img.src = images[i].url;
                         });
                         imagePromises.push(promise);
@@ -707,30 +684,40 @@
                     hideLoading(loadingOverlay);
                     showImage(0);
 
-                    // 使用 fetch 预热后续图片的 CDN
-                    images.slice(preloadBatch, preloadBatch + 5).forEach(image => {
-                        fetch(image.url, { method: 'HEAD' });
-                    });
-
-                    Promise.all(imagePromises.slice(1)).then(() => {
-                        const loadNextBatch = () => {
-                            const nextBatch = Math.min(currentBatch + 2, images.length);
-                            for (let i = currentBatch; i < nextBatch; i++) {
-                                const img = new Image();
-                                img.decoding = 'async';
-                                img.src = images[i].url;
-                                preloadedImages.set(images[i].url, img);
-                            }
-                            currentBatch = nextBatch;
-                            if (currentBatch < images.length) {
-                                setTimeout(loadNextBatch, 200);
-                            }
-                        };
-                        loadNextBatch();
-                    });
+                    loadAllImages();
                 }
             } finally {
                 setTimeout(() => hideLoading(loadingOverlay), 2000);
+            }
+        }
+
+        async function loadAllImages() {
+            if (isLoading) return;
+            isLoading = true;
+
+            try {
+                for (let i = 0; i < images.length; i++) {
+                    if (!preloadedImages.has(images[i].url)) {
+                        const img = new Image();
+                        // 添加错误处理和备用 CDN
+                        img.onerror = () => {
+                            console.log(`Switching to backup CDN for ${images[i].name}`);
+                            img.src = images[i].backupUrl;
+                        };
+                        await new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = () => {
+                                // 如果备用 CDN 也失败，继续下一张
+                                console.log(`Both CDNs failed for ${images[i].name}`);
+                                resolve();
+                            };
+                            img.src = images[i].url;
+                        });
+                        preloadedImages.set(images[i].url, img);
+                    }
+                }
+            } finally {
+                isLoading = false;
             }
         }
 
@@ -753,14 +740,16 @@
             setTimeout(() => overlay.remove(), 300);
         }
 
-        // 添加图片尺寸优化
-        function getOptimizedImageUrl(url, width) {
-            // 根据屏幕宽度请求合适尺寸的图片
-            const screenWidth = Math.min(window.innerWidth, width || 800);
-            return `${url}?w=${screenWidth}`;
-        }
-
         function showImage(index) {
+            if (!images[index]) return;
+            
+            const currentImage = images[index];
+            if (!preloadedImages.has(currentImage.url)) {
+                const img = new Image();
+                img.src = currentImage.url;
+                preloadedImages.set(currentImage.url, img);
+            }
+
             // 清理旧的图片缓存
             cleanupImageCache();
 
@@ -768,19 +757,6 @@
             if (oldContainer) {
                 oldContainer.style.animation = `${currentX > startX ? 'slideOutRight' : 'slideOutLeft'} 0.3s forwards`;
                 setTimeout(() => oldContainer.remove(), 300);
-            }
-
-            // 确保新图片已预加载
-            const currentImage = images[index];
-            if (!preloadedImages.has(currentImage.url)) {
-                const img = new Image();
-                img.decoding = 'async';
-                img.loading = 'eager';
-                img.sizes = `(max-width: 768px) 100vw, ${Math.min(window.innerWidth, 800)}px`;
-                
-                // 使用已缓存的图片
-                const cachedImg = preloadedImages.get(currentImage.url);
-                img.src = cachedImg.src;
             }
 
             setTimeout(() => {
@@ -1224,11 +1200,16 @@
 
         // 清理过期的缓存图片
         function cleanupImageCache() {
-            if (preloadedImages.size > MAX_CACHED_IMAGES) {
+            if (preloadedImages.size > MAX_CACHED_IMAGES * 1.5) {  // 允许更多缓存
                 const currentUrl = images[currentIndex].url;
                 const keysToDelete = Array.from(preloadedImages.keys())
                     .filter(key => key !== currentUrl)
-                    .slice(0, preloadedImages.size - MAX_CACHED_IMAGES);
+                    .slice(0, preloadedImages.size - MAX_CACHED_IMAGES)
+                    .filter(key => {
+                        // 保留当前图片前后各 10 张的缓存
+                        const index = images.findIndex(img => img.url === key);
+                        return Math.abs(index - currentIndex) > 10;
+                    });
                 
                 keysToDelete.forEach(key => {
                     preloadedImages.delete(key);

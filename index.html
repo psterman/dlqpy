@@ -426,12 +426,23 @@
 
             .swipe-hint {
                 bottom: 20px;
+                position: fixed;  /* 固定在底部 */
+                left: 0;
+                right: 0;
+                z-index: 100;
             }
 
             .swipe-hint span {
                 min-width: 100px;
                 padding: 8px;
                 font-size: 14px;
+                background-color: rgba(255, 255, 255, 0.9);  /* 半透明背景 */
+                backdrop-filter: blur(5px);  /* 背景模糊效果 */
+                -webkit-backdrop-filter: blur(5px);
+            }
+
+            [data-theme="dark"] .swipe-hint span {
+                background-color: rgba(45, 45, 45, 0.9);
             }
         }
 
@@ -459,7 +470,8 @@
         let currentIndex = 0;
         let funnyCount = 0;
         let images = [];
-        let preloadedImages = new Map();  // 用于存储预加载的图片
+        let preloadedImages = new Map();
+        const MAX_CACHED_IMAGES = 30;  // 增加缓存数量，因为图片较小
         let lastTapTime = 0;
         let tapCount = 0;
         let longPressTimer;
@@ -639,8 +651,6 @@
                 );
 
                 const files = await response.json();
-
-                // 过滤出图片文件并转换 URL
                 images = files
                     .filter(file => file.name.match(/\.(jpg|jpeg|png|gif)$/i))
                     .map(file => ({
@@ -649,28 +659,47 @@
                     }));
 
                 if (images.length > 0) {
-                    // 先显示第一张，然后再打乱顺序
-                    const firstImage = images[0];
-                    images = [firstImage, ..._.shuffle(images.slice(1))];
-                    
-                    // 立即加载第一张图片
-                    const img = new Image();
-                    img.src = firstImage.url;
-                    img.onload = () => {
-                        hideLoading(loadingOverlay);
-                        showImage(0);
-                        // 加载完第一张后再预加载其他图片
-                        for (let i = 1; i < Math.min(4, images.length); i++) {
-                            const img = new Image();
+                    const preloadBatch = 5;  // 减少初始加载数量
+                    const imagePromises = [];
+
+                    for (let i = 0; i < Math.min(preloadBatch, images.length); i++) {
+                        const img = new Image();
+                        img.decoding = i < 2 ? 'sync' : 'async';  // 只同步解码前2张
+                        img.fetchPriority = i < 5 ? 'high' : 'low';
+                        const promise = new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.loading = i < 3 ? 'eager' : 'lazy';  // 只立即加载前3张
                             img.src = images[i].url;
-                            preloadedImages.set(images[i].url, img);
-                        }
-                    };
-                    preloadedImages.set(firstImage.url, img);
+                        });
+                        imagePromises.push(promise);
+                        preloadedImages.set(images[i].url, img);
+                    }
+
+                    await imagePromises[0];  // 只等待第一张加载完成
+                    hideLoading(loadingOverlay);
+                    showImage(0);
+
+                    // 后台持续预加载
+                    let currentBatch = preloadBatch;
+                    Promise.all(imagePromises.slice(1)).then(() => {
+                        const loadNextBatch = () => {
+                            const nextBatch = Math.min(currentBatch + 3, images.length);  // 每次只加载3张
+                            for (let i = currentBatch; i < nextBatch; i++) {
+                                const img = new Image();
+                                img.decoding = 'async';
+                                img.src = images[i].url;
+                                preloadedImages.set(images[i].url, img);
+                            }
+                            currentBatch = nextBatch;
+                            if (currentBatch < images.length) {
+                                setTimeout(loadNextBatch, 300);  // 更快的加载间隔
+                            }
+                        };
+                        loadNextBatch();
+                    });
                 }
             } finally {
-                // 如果5秒后还没加载完，也隐藏loading
-                setTimeout(() => hideLoading(loadingOverlay), 5000);
+                setTimeout(() => hideLoading(loadingOverlay), 2000);
             }
         }
 
@@ -693,18 +722,41 @@
             setTimeout(() => overlay.remove(), 300);
         }
 
+        // 添加图片尺寸优化
+        function getOptimizedImageUrl(url, width) {
+            // 根据屏幕宽度请求合适尺寸的图片
+            const screenWidth = Math.min(window.innerWidth, width || 800);
+            return `${url}?w=${screenWidth}`;
+        }
+
         function showImage(index) {
+            // 清理旧的图片缓存
+            cleanupImageCache();
+
             const oldContainer = document.querySelector('.image-container');
             if (oldContainer) {
                 oldContainer.style.animation = `${currentX > startX ? 'slideOutRight' : 'slideOutLeft'} 0.3s forwards`;
                 setTimeout(() => oldContainer.remove(), 300);
             }
 
+            // 确保新图片已预加载
+            const currentImage = images[index];
+            if (!preloadedImages.has(currentImage.url)) {
+                const img = new Image();
+                img.decoding = 'async';
+                img.loading = 'eager';
+                img.sizes = `(max-width: 768px) 100vw, ${Math.min(window.innerWidth, 800)}px`;
+                
+                // 使用已缓存的图片
+                const cachedImg = preloadedImages.get(currentImage.url);
+                img.src = cachedImg.src;
+            }
+
             setTimeout(() => {
                 imageContainer.innerHTML = '';
                 const container = document.createElement('div');
                 container.className = 'image-container';
-                container.style.opacity = '1';  // 直接显示，不需要淡入动画
+                container.style.opacity = '1';
 
                 const card = document.createElement('div');
                 card.className = 'image-card';
@@ -712,15 +764,11 @@
                 const img = document.createElement('img');
                 img.decoding = 'async';
                 img.loading = 'eager';
-                img.sizes = '(max-width: 768px) 100vw, 800px';  // 提示浏览器图片显示尺寸
+                img.sizes = `(max-width: 768px) 100vw, ${Math.min(window.innerWidth, 800)}px`;
                 
-                const currentImage = images[index];
-                if (preloadedImages.has(currentImage.url)) {
-                    img.src = preloadedImages.get(currentImage.url).src;
-                } else {
-                    img.src = currentImage.url;
-                }
-                img.alt = images[index].name;
+                // 使用已缓存的图片
+                const cachedImg = preloadedImages.get(currentImage.url);
+                img.src = cachedImg.src;
 
                 img.onload = () => {
                     // 检查是否为长图
@@ -741,9 +789,10 @@
                 card.appendChild(img);
                 container.appendChild(card);
 
-                // 添加滑动提示（在图片下方）
+                // 添加滑动提示
                 const hint = document.createElement('div');
                 hint.className = 'swipe-hint';
+                hint.style.opacity = '1';  // 确保提示可见
 
                 const leftSpan = document.createElement('span');
                 leftSpan.className = 'left-button';
@@ -770,20 +819,10 @@
                 imageContainer.appendChild(container);
             }, oldContainer ? 250 : 0);
 
-            // 移除旧的下一张按钮（如果存在）
-            const oldNextButton = document.querySelector('.next-button');
-            if (oldNextButton) {
-                oldNextButton.remove();
-            }
-
-            // 移除旧的滑动提示（如果存在）
-            const oldHint = document.querySelector('.swipe-hint');
-            if (oldHint) {
-                oldHint.remove();
-            }
-
-            // 在显示新图片的同时预加载后面的图片
-            preloadNextImages(index);
+            // 使用 requestIdleCallback 在空闲时预加载
+            requestIdleCallback(() => {
+                preloadNextImages(index);
+            });
         }
 
         function getRandomText(isLike) {
@@ -1151,6 +1190,45 @@
                 isScrolling = false;
             }, 100);
         }, true);
+
+        // 清理过期的缓存图片
+        function cleanupImageCache() {
+            if (preloadedImages.size > MAX_CACHED_IMAGES) {
+                const currentUrl = images[currentIndex].url;
+                const keysToDelete = Array.from(preloadedImages.keys())
+                    .filter(key => key !== currentUrl)
+                    .slice(0, preloadedImages.size - MAX_CACHED_IMAGES);
+                
+                keysToDelete.forEach(key => {
+                    preloadedImages.delete(key);
+                });
+            }
+        }
+
+        // 添加用户行为预测
+        let swipeDirection = null;
+        let swipeSpeed = 0;
+        const swipeHistory = [];
+
+        function predictNextAction() {
+            if (swipeHistory.length < 3) return;
+            
+            // 分析最近的滑动行为
+            const recentSwipes = swipeHistory.slice(-3);
+            const avgSpeed = recentSwipes.reduce((sum, speed) => sum + speed, 0) / 3;
+            const direction = recentSwipes[recentSwipes.length - 1] > 0 ? 1 : -1;
+
+            // 预测下一个方向并预加载
+            const predictedIndex = currentIndex + direction;
+            if (predictedIndex >= 0 && predictedIndex < images.length) {
+                const predictedImage = images[predictedIndex];
+                if (!preloadedImages.has(predictedImage.url)) {
+                    const img = new Image();
+                    img.src = predictedImage.url;
+                    preloadedImages.set(predictedImage.url, img);
+                }
+            }
+        }
     </script>
 </body>
 

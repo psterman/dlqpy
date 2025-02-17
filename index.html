@@ -646,44 +646,75 @@
         async function loadImages() {
             const loadingOverlay = showLoading();
             try {
+                // 测试 CDN 和原始 URL 的响应时间
+                async function testImageLoadTime(url) {
+                    const start = performance.now();
+                    const img = new Image();
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                        img.src = url;
+                    });
+                    return performance.now() - start;
+                }
+
                 const response = await fetch(
                     `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
                 );
 
                 const files = await response.json();
+                const firstImage = files[0];
+                
+                // 测试两个地址的加载时间
+                const githubUrl = firstImage.download_url;
+                const cdnUrl = `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${firstImage.name}`;
+                
+                const [githubTime, cdnTime] = await Promise.all([
+                    testImageLoadTime(githubUrl),
+                    testImageLoadTime(cdnUrl)
+                ]);
+
+                // 选择响应更快的 URL 模式
+                const useGithub = githubTime < cdnTime;
+                console.log(`GitHub: ${githubTime}ms, CDN: ${cdnTime}ms`);
+
                 images = files
                     .filter(file => file.name.match(/\.(jpg|jpeg|png|gif)$/i))
                     .map(file => ({
-                        url: `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
+                        url: useGithub ? file.download_url : 
+                            `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
                         name: file.name
                     }));
 
                 if (images.length > 0) {
-                    const preloadBatch = 5;  // 减少初始加载数量
+                    const preloadBatch = 3;  // 减少初始预加载数量
                     const imagePromises = [];
 
                     for (let i = 0; i < Math.min(preloadBatch, images.length); i++) {
                         const img = new Image();
-                        img.decoding = i < 2 ? 'sync' : 'async';  // 只同步解码前2张
+                        img.decoding = i === 0 ? 'sync' : 'async';  // 只同步加载第一张
                         img.fetchPriority = i < 5 ? 'high' : 'low';
                         const promise = new Promise((resolve) => {
                             img.onload = resolve;
-                            img.loading = i < 3 ? 'eager' : 'lazy';  // 只立即加载前3张
+                            img.loading = i === 0 ? 'eager' : 'lazy';  // 只立即加载第一张
                             img.src = images[i].url;
                         });
                         imagePromises.push(promise);
                         preloadedImages.set(images[i].url, img);
                     }
 
-                    await imagePromises[0];  // 只等待第一张加载完成
+                    await imagePromises[0];
                     hideLoading(loadingOverlay);
                     showImage(0);
 
-                    // 后台持续预加载
-                    let currentBatch = preloadBatch;
+                    // 使用 fetch 预热后续图片的 CDN
+                    images.slice(preloadBatch, preloadBatch + 5).forEach(image => {
+                        fetch(image.url, { method: 'HEAD' });
+                    });
+
                     Promise.all(imagePromises.slice(1)).then(() => {
                         const loadNextBatch = () => {
-                            const nextBatch = Math.min(currentBatch + 3, images.length);  // 每次只加载3张
+                            const nextBatch = Math.min(currentBatch + 2, images.length);
                             for (let i = currentBatch; i < nextBatch; i++) {
                                 const img = new Image();
                                 img.decoding = 'async';
@@ -692,7 +723,7 @@
                             }
                             currentBatch = nextBatch;
                             if (currentBatch < images.length) {
-                                setTimeout(loadNextBatch, 300);  // 更快的加载间隔
+                                setTimeout(loadNextBatch, 200);
                             }
                         };
                         loadNextBatch();

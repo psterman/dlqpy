@@ -726,17 +726,28 @@
                         preloadedImages.set(images[i].url, img);
                     }
 
-                    await imagePromises[0];
+                    // 设置超时，防止加载卡住
+                    const timeout = new Promise(resolve => setTimeout(resolve, 5000));
+                    await Promise.race([imagePromises[0], timeout]);
                     hideLoading(loadingOverlay);
-
-                    // 显示移动端滑动提示
+                    
+                    // 无论是否加载完成，都显示图片和提示
                     if (window.innerWidth <= 768) {
                         showSwipeHint();
                     }
                     showImage(0);
                 }
+            } catch (error) {
+                console.error('Loading error:', error);
+                hideLoading(loadingOverlay);
+                // 显示错误提示
+                const errorHint = document.createElement('div');
+                errorHint.className = 'error-hint';
+                errorHint.textContent = '加载失败，请刷新重试';
+                document.body.appendChild(errorHint);
             } finally {
-                setTimeout(() => hideLoading(loadingOverlay), 1500);
+                // 确保loading一定会消失
+                hideLoading(loadingOverlay);
             }
         }
 
@@ -1266,7 +1277,7 @@
             document.body.appendChild(hint);
         }
 
-        // 修改移动端提示样式
+        // 修改移动端提示样式，确保始终可见
         const style = document.createElement('style');
         style.textContent = `
             .mobile-hint {
@@ -1279,13 +1290,15 @@
                 display: flex;
                 justify-content: center;
                 gap: 20px;
-                pointer-events: none;  // 让提示不影响图片交互
+                pointer-events: none;
+                background: none !important;
             }
 
             @media (max-width: 768px) {
                 .image-container {
-                    height: calc(100vh - 100px) !important;  // 留出底部提示空间
-                    padding-bottom: 60px;  // 确保图片不被提示遮挡
+                    height: 100vh !important;
+                    padding-bottom: 60px;
+                    position: relative;
                 }
 
                 .swipe-hint span {
@@ -1298,32 +1311,20 @@
                     border-radius: 20px;
                     text-align: center;
                     box-shadow: 0 2px 10px var(--shadow-color);
-                    pointer-events: auto;  // 恢复提示的交互能力
+                    pointer-events: auto;
+                    z-index: 1001;
+                    position: relative;
                 }
 
-                [data-theme="dark"] .swipe-hint span {
-                    background-color: rgba(45, 45, 45, 0.9);
-                }
-               
-                .mobile-hint span {
-                    transition: transform 0.2s ease;
-                }
-               
-                .mobile-hint span:active {
-                    transform: scale(0.95);
-                }
-
-                .image-card {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    height: 100%;
-                }
-
-                .image-card img {
-                    max-height: calc(100vh - 160px);  // 确保图片不会被提示遮挡
-                    width: auto;
-                    object-fit: contain;
+                .error-hint {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background-color: rgba(255, 255, 255, 0.9);
+                    padding: 15px 30px;
+                    border-radius: 10px;
+                    z-index: 2000;
                 }
             }
         `;

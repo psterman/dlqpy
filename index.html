@@ -182,38 +182,40 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: min(15px, 3vw) min(20px, 4vw);
+            padding: min(20px, 4vw) min(25px, 5vw);
             border-radius: 20px;
             cursor: pointer;
             box-shadow: 0 2px 10px var(--shadow-color);
             z-index: 1000;
-            font-size: min(16px, 4vw);
+            font-size: min(18px, 4.5vw);
             border: none;
             color: var(--text-color);
             background-color: var(--counter-bg);
             transition: all 0.3s ease;
-            min-width: min(120px, 25vw);
+            min-width: min(140px, 30vw);
             border: 1px solid var(--text-color);
             background: linear-gradient(to bottom, var(--counter-bg), var(--card-bg));
+            font-weight: bold;
         }
 
         .exit-button {
             position: fixed;
             top: 20px;
             left: 20px;
-            padding: min(15px, 3vw) min(20px, 4vw);
+            padding: min(20px, 4vw) min(25px, 5vw);
             border-radius: 20px;
             cursor: pointer;
             box-shadow: 0 2px 10px var(--shadow-color);
             z-index: 1000;
-            font-size: min(16px, 4vw);
+            font-size: min(18px, 4.5vw);
             border: none;
             color: var(--text-color);
             background-color: var(--counter-bg);
             transition: all 0.3s ease;
-            min-width: min(120px, 25vw);
+            min-width: min(140px, 30vw);
             border: 1px solid var(--text-color);
             background: linear-gradient(to bottom, var(--counter-bg), var(--card-bg));
+            font-weight: bold;
         }
 
         .exit-button:hover {
@@ -427,8 +429,15 @@
 
             .theme-toggle,
             .exit-button {
-                padding: 8px 15px;
-                font-size: 14px;
+                padding: 12px 20px;
+                font-size: 16px;
+                min-width: 100px;
+                box-shadow: 0 4px 15px var(--shadow-color);
+            }
+
+            .theme-toggle:active,
+            .exit-button:active {
+                transform: scale(0.95);
             }
 
             .swipe-hint {
@@ -487,166 +496,72 @@
         let tapCount = 0;
         let longPressTimer;
 
-        // 加载时的舔狗文案
-        const loadingTexts = [
-            "奴才正在为皇上准备奏折...",
-            "小的正在整理御览资料...",
-            "奴才斗胆为陛下筛选...",
-            "恳请圣上稍候片刻...",
-            "奴才正在诚惶诚恐地准备...",
-            "容奴才为陛下精选...",
-            "奴才正在战战兢兢地整理...",
-            "请容奴才为圣上过目...",
-            "奴才正在为万岁爷准备...",
-            "小的不敢怠慢，马上呈上...",
-            "奴才正在用心准备...",
-            "恳请陛下稍作休息...",
-            "奴才正在为圣上效劳...",
-            "容奴才为陛下筛选精品...",
-            "小的正在竭尽全力准备...",
-            "奴才正在为皇上精心挑选...",
-            "请容奴才再做细选...",
-            "万岁爷请稍候，马上呈上...",
-            "奴才正在为陛下忙碌...",
-            "小的不敢懈怠，即刻呈递...",
-            "恳请圣上稍作歇息...",
-            "奴才正在为陛下效命...",
-            "容小的为皇上准备...",
-            "奴才正在为万岁爷甄选...",
-            "请容奴才为圣上整理...",
-            "小的正在为陛下忙活...",
-            "奴才正在为皇上筛选...",
-            "恳请万岁爷稍等片刻...",
-            "奴才正在为圣上准备...",
-            "容小的为陛下效劳...",
-            "奴才正在为皇上整理...",
-            "请容奴才为万岁爷准备...",
-            "小的正在为圣上筛选...",
-            "奴才正在为陛下甄选...",
-            "恳请皇上稍作休息...",
-            "奴才正在为圣上忙碌...",
-            "容小的为万岁爷效劳...",
-            "奴才正在为陛下准备...",
-            "请容奴才为皇上整理...",
-            "小的正在为圣上效命...",
-            "奴才正在为万岁爷筛选...",
-            "恳请陛下稍候片刻...",
-            "奴才正在为皇上甄选...",
-            "容小的为圣上效劳...",
-            "奴才正在为陛下整理...",
-            "请容奴才为万岁爷准备...",
-            "小的正在为圣上筛选...",
-            "奴才正在为皇上效命...",
-            "恳请万岁爷稍等片刻...",
-            "奴才正在为陛下忙活..."
-        ];
-
-        // 左滑文案
+        // 左滑文案（不喜欢）
         const dislikeTexts = [
-            "朕已阅",
-            "退下吧",
-            "不准奏",
-            "无趣",
-            "枯燥",
-            "乏味",
+            "不准",
+            "驳回",
             "朕不悦",
+            "退下",
+            "无趣",
             "荒谬",
             "胡闹",
             "放肆",
-            "大胆",
             "荒唐",
             "糊涂",
-            "不知所谓",
-            "岂有此理",
             "朕累了",
-            "朕乏了",
-            "朕倦了",
             "下一个",
-            "不值一看",
-            "休得胡言",
-            "简直可笑",
-            "无稽之谈",
-            "朕不想看",
-            "太过无聊",
-            "难登大雅",
-            "不知天高地厚",
-            "不知分寸",
-            "太过草率",
-            "朕看不下去了",
-            "有辱斯文",
-            "贻笑大方",
-            "不知检点",
-            "不堪入目",
-            "朕甚失望",
-            "不知悔改",
-            "不知进退",
-            "不知轻重",
-            "不知好歹",
-            "不知羞耻",
-            "朕心烦了",
-            "朕不准",
-            "朕不许",
-            "朕不要",
-            "着实无趣",
-            "甚是无味",
-            "令朕生厌",
-            "令朕不快",
-            "令朕反感",
-            "令朕作呕"
+            "可笑",
+            "无聊",
+            "草率",
+            "失望",
+            "不妥",
+            "不准奏",
+            "朕烦了",
+            "太差",
+            "不堪",
+            "无用",
+            "枉费",
+            "乏味",
+            "无趣",
+            "不看",
+            "休奏",
+            "够了",
+            "住口",
+            "朕倦了"
         ];
 
-        // 右滑文案
+        // 右滑文案（喜欢）
         const likeTexts = [
-            "龙颜大悦",
             "准奏",
             "甚好",
             "不错",
             "有趣",
             "妙哉",
-            "爱卿说得好",
-            "朕很欣慰",
+            "欣慰",
             "可",
             "准",
-            "御笔亲批",
-            "朕准了",
-            "甚妙",
-            "妙不可言",
-            "深得朕心",
-            "朕很满意",
+            "妙",
             "善",
             "极好",
             "朕笑了",
-            "卿家有才",
-            "果然精彩",
-            "深得朕意",
-            "朕甚欢喜",
-            "妙笔生花",
-            "才思敏捷",
-            "朕要重赏",
-            "卿家妙极",
-            "真乃大才",
-            "朕要多看几遍",
-            "传朕旨意",
-            "朕龙心大悦",
-            "妙不可言",
-            "绝妙好辞",
+            "有才",
+            "精彩",
+            "欢喜",
+            "喜欢",
+            "可嘉",
+            "甚妙",
             "朕准了",
-            "甚合朕意",
-            "爱卿用心了",
-            "朕很喜欢",
-            "可圈可点",
-            "令朕开怀",
-            "妙趣横生",
-            "朕要赏赐",
-            "朕要嘉奖",
-            "朕要褒奖",
-            "朕要表彰",
-            "朕要夸赞",
-            "朕心甚悦",
-            "朕意甚慰",
-            "朕心大快",
-            "朕意大畅",
-            "朕心舒畅"
+            "不坏",
+            "甚善",
+            "有理",
+            "准了",
+            "可用",
+            "甚佳",
+            "朕悦",
+            "甚慰",
+            "可取",
+            "不赖",
+            "朕喜"
         ];
 
         // 使用 GitHub API 获取仓库中 pic 文件夹的内容
@@ -675,17 +590,19 @@
                         name: file.name
                     }));
 
+                // 确保一开始就打乱顺序
+                images = _.shuffle(images);
+
                 if (images.length > 0) {
-                    images = _.shuffle(images);
-                    const preloadBatch = 5;  // 减少初始加载数量，但加快加载速度
+                    const preloadBatch = 5;
+                    const imagePromises = [];
 
                     for (let i = 0; i < Math.min(preloadBatch, images.length); i++) {
                         const img = new Image();
-                        img.decoding = 'async';  // 使用异步解码
+                        img.decoding = 'async';
                         const promise = new Promise((resolve) => {
                             img.onload = resolve;
                             img.onerror = () => {
-                                console.log(`Switching to backup CDN for ${images[i].name}`);
                                 img.src = images[i].backupUrl;
                             };
                             img.src = images[i].url;
@@ -696,30 +613,12 @@
 
                     await imagePromises[0];
                     hideLoading(loadingOverlay);
-                    showImage(0);
-
-                    // 分批加载剩余图片
-                    let loadedCount = preloadBatch;
-                    const batchSize = 3;  // 减小批量大小，但加快加载频率
-
-                    function loadNextBatch() {
-                        const end = Math.min(loadedCount + batchSize, images.length);
-                        for (let i = loadedCount; i < end; i++) {
-                            const img = new Image();
-                            img.onerror = () => {
-                                img.src = images[i].backupUrl;
-                            };
-                            img.src = images[i].url;
-                            preloadedImages.set(images[i].url, img);
-                        }
-                        loadedCount = end;
-
-                        if (loadedCount < images.length) {
-                            setTimeout(loadNextBatch, 200);  // 缩短加载间隔
-                        }
+                   
+                    // 显示移动端滑动提示
+                    if (window.innerWidth <= 768) {
+                        showSwipeHint();
                     }
-
-                    loadNextBatch();
+                    showImage(0);
                 }
             } finally {
                 setTimeout(() => hideLoading(loadingOverlay), 1500);
@@ -1251,6 +1150,60 @@
                 }
             }
         }
+
+        // 添加移动端滑动提示
+        function showSwipeHint() {
+            const hint = document.createElement('div');
+            hint.className = 'swipe-hint mobile-hint';
+            hint.innerHTML = `
+                <span class="left-button">👈 左滑不喜欢</span>
+                <span class="right-button">右滑喜欢 👉</span>
+            `;
+            document.body.appendChild(hint);
+        }
+
+        // 修改移动端提示样式
+        const style = document.createElement('style');
+        style.textContent = `
+            .mobile-hint {
+                position: fixed !important;
+                bottom: 20px !important;
+                left: 0 !important;
+                right: 0 !important;
+                z-index: 1000;
+                opacity: 1;
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+            }
+
+            @media (max-width: 768px) {
+                .swipe-hint span {
+                    min-width: 100px;
+                    background-color: rgba(255, 255, 255, 0.9);
+                    backdrop-filter: blur(5px);
+                    -webkit-backdrop-filter: blur(5px);
+                    padding: 10px 15px;
+                    font-size: 14px;
+                    border-radius: 20px;
+                    text-align: center;
+                    box-shadow: 0 2px 10px var(--shadow-color);
+                }
+
+                [data-theme="dark"] .swipe-hint span {
+                    background-color: rgba(45, 45, 45, 0.9);
+                }
+               
+                .mobile-hint span {
+                    transition: transform 0.2s ease;
+                }
+               
+                .mobile-hint span:active {
+                    transform: scale(0.95);
+                }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 

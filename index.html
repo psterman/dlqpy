@@ -655,14 +655,12 @@
         const path = 'pic';
 
         function getOptimizedImageUrl(url, isMobile) {
-            const width = isMobile ? window.innerWidth : 800;
-            const quality = isMobile ? 70 : 80;  // 移动端可以使用更低的质量
-            return `${url}?quality=${quality}&w=${width}`;
+            // 直接使用原始 URL，让浏览器自己处理缩放
+            return url;
         }
 
         async function loadImages() {
             const loadingOverlay = showLoading();
-            const isMobile = window.innerWidth <= 768;
             try {
                 const response = await fetch(
                     `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
@@ -672,24 +670,18 @@
                 images = files
                     .filter(file => file.name.match(/\.(jpg|jpeg|png|gif)$/i))
                     .map(file => ({
-                        url: getOptimizedImageUrl(
-                            `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
-                            isMobile
-                        ),
-                        backupUrl: getOptimizedImageUrl(
-                            `https://fastly.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
-                            isMobile
-                        ),
+                        url: `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
+                        backupUrl: `https://fastly.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
                         name: file.name
                     }));
 
                 if (images.length > 0) {
-                    const preloadBatch = 5;
-                    const imagePromises = [];
+                    images = _.shuffle(images);
+                    const preloadBatch = 5;  // 减少初始加载数量，但加快加载速度
 
                     for (let i = 0; i < Math.min(preloadBatch, images.length); i++) {
                         const img = new Image();
-                        // 移除解码和优先级限制
+                        img.decoding = 'async';  // 使用异步解码
                         const promise = new Promise((resolve) => {
                             img.onload = resolve;
                             img.onerror = () => {
@@ -706,40 +698,31 @@
                     hideLoading(loadingOverlay);
                     showImage(0);
 
-                    loadAllImages();
-                }
-            } finally {
-                setTimeout(() => hideLoading(loadingOverlay), 2000);
-            }
-        }
+                    // 分批加载剩余图片
+                    let loadedCount = preloadBatch;
+                    const batchSize = 3;  // 减小批量大小，但加快加载频率
 
-        async function loadAllImages() {
-            if (isLoading) return;
-            isLoading = true;
-
-            try {
-                for (let i = 0; i < images.length; i++) {
-                    if (!preloadedImages.has(images[i].url)) {
-                        const img = new Image();
-                        // 添加错误处理和备用 CDN
-                        img.onerror = () => {
-                            console.log(`Switching to backup CDN for ${images[i].name}`);
-                            img.src = images[i].backupUrl;
-                        };
-                        await new Promise((resolve) => {
-                            img.onload = resolve;
+                    function loadNextBatch() {
+                        const end = Math.min(loadedCount + batchSize, images.length);
+                        for (let i = loadedCount; i < end; i++) {
+                            const img = new Image();
                             img.onerror = () => {
-                                // 如果备用 CDN 也失败，继续下一张
-                                console.log(`Both CDNs failed for ${images[i].name}`);
-                                resolve();
+                                img.src = images[i].backupUrl;
                             };
                             img.src = images[i].url;
-                        });
-                        preloadedImages.set(images[i].url, img);
+                            preloadedImages.set(images[i].url, img);
+                        }
+                        loadedCount = end;
+
+                        if (loadedCount < images.length) {
+                            setTimeout(loadNextBatch, 200);  // 缩短加载间隔
+                        }
                     }
+
+                    loadNextBatch();
                 }
             } finally {
-                isLoading = false;
+                setTimeout(() => hideLoading(loadingOverlay), 1500);
             }
         }
 
@@ -909,7 +892,12 @@
         // 检查是否需要重置图片列表
         function checkAndResetImages() {
             if (currentIndex >= images.length) {
+                const currentImage = images[currentIndex - 1];  // 保存当前图片
                 images = _.shuffle(images);
+                // 确保新的第一张不是上一轮的最后一张
+                while (images[0].url === currentImage.url && images.length > 1) {
+                    images = _.shuffle(images);
+                }
                 currentIndex = 0;
                 showImage(currentIndex);
             }

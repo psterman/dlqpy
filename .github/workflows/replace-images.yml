@@ -1,0 +1,19 @@
+name: Auto Replace Image URLs
+on: [push]
+jobs:
+  replace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          
+      - run: |
+          find . -name "*.html" -exec sed -i 's|https://raw\.githubusercontent\.com/psterman/dlqpy/main/pic/|https://cdn.jsdelivr.net/gh/psterman/dlqpy@main/pic/|g' {} +
+          find . -name "*.html" -exec sed -i -E 's|src=["'\'']/?(pic/)|\1|g; s|(src=["'\''])(pic/)|\1https://cdn.jsdelivr.net/gh/psterman/dlqpy@main/\2|g' {} +
+          
+      - run: |
+          git config --global user.name "GitHub Bot"
+          git config --global user.email "actions@github.com"
+          git add .
+          git diff --quiet || (git commit -m "Auto: Replace URLs" && git push)

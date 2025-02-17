@@ -299,34 +299,40 @@
 
         /* 添加图片切换动画样式 */
         @keyframes slideOutLeft {
-            to { 
-                transform: translateX(-100%) rotate(-5deg); 
+            to {
+                transform: translateX(-100%) rotate(-5deg);
                 opacity: 0;
             }
         }
-        
+
         @keyframes slideOutRight {
-            to { 
-                transform: translateX(100%) rotate(5deg); 
+            to {
+                transform: translateX(100%) rotate(5deg);
                 opacity: 0;
             }
         }
-        
+
         @keyframes slideIn {
-            from { 
-                transform: translateX(100%); 
-                opacity: 0; 
+            from {
+                transform: translateX(100%);
+                opacity: 0;
             }
-            to { 
-                transform: translateX(0); 
-                opacity: 1; 
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
             }
         }
 
         /* 添加淡入效果 */
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         /* 添加浮动提示样式 */
@@ -348,10 +354,21 @@
         }
 
         @keyframes fadeInOut {
-            0% { opacity: 0; }
-            20% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; }
+            0% {
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
         }
     </style>
 </head>
@@ -554,6 +571,8 @@
                         name: file.name
                     }));
 
+                console.log(`加载了 ${images.length} 张图片`);
+
                 if (images.length > 0) {
                     images = _.shuffle(images);
                     // 预加载第一张图片
@@ -653,11 +672,11 @@
 
                 card.appendChild(img);
                 container.appendChild(card);
-                
+
                 // 添加滑动提示（在图片下方）
                 const hint = document.createElement('div');
                 hint.className = 'swipe-hint';
-                
+
                 const leftSpan = document.createElement('span');
                 leftSpan.className = 'left-button';
                 leftSpan.innerHTML = `👈 ${getRandomText(false)}`;
@@ -666,7 +685,7 @@
                     showImage(currentIndex);
                     checkAndResetImages();
                 };
-                
+
                 const rightSpan = document.createElement('span');
                 rightSpan.className = 'right-button';
                 rightSpan.innerHTML = `${getRandomText(true)} 👉`;
@@ -676,7 +695,7 @@
                     showImage(currentIndex);
                     checkAndResetImages();
                 };
-                
+
                 hint.appendChild(leftSpan);
                 hint.appendChild(rightSpan);
                 container.appendChild(hint);
@@ -820,7 +839,7 @@
             if (!isMouseDown) return;
             e.preventDefault();  // 防止拖动时选中文本
             e.stopPropagation(); // 阻止事件冒泡
-            
+
             currentX = e.clientX;
             const diff = currentX - startX;
             const card = document.querySelector('.image-card');
@@ -838,7 +857,7 @@
             const threshold = window.innerWidth * 0.2;
             const timeElapsed = Date.now() - startTime;
             const velocity = Math.abs(diff) / Math.max(timeElapsed, 1);
-            
+
             // 降低滑动阈值，使鼠标操作更容易触发
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
                 if (diff > 0) {  // 右滑表示喜欢
@@ -876,19 +895,19 @@
             if (!isMouseDown) return;
             isMouseDown = false;
             isMoving = false;
-            
+
             // 恢复默认鼠标样式
             const card = document.querySelector('.image-card');
             if (card) {
                 card.style.cursor = 'grab';
             }
-            
+
             // 处理鼠标滑动结束
             const diff = e.clientX - startX;
             const threshold = window.innerWidth * 0.2;
             const timeElapsed = Date.now() - startTime;
             const velocity = Math.abs(diff) / Math.max(timeElapsed, 1);
-            
+
             // 降低滑动阈值，使鼠标操作更容易触发
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
                 if (diff > 0) {  // 右滑表示喜欢
@@ -1100,12 +1119,12 @@
                 justify-content: center;
                 z-index: 9999;
             `;
-            
+
             const img = document.createElement('img');
             img.src = image.url;
             img.style.maxWidth = '95vw';
             img.style.maxHeight = '95vh';
-            
+
             // 添加放大模式提示
             const hint = document.createElement('div');
             hint.className = 'floating-hint';

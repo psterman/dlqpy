@@ -594,15 +594,15 @@
                 images = _.shuffle(images);
 
                 if (images.length > 0) {
-                    const preloadBatch = 5;
+                    const preloadBatch = 3;  // 减少初始加载数量
                     const imagePromises = [];
 
                     for (let i = 0; i < Math.min(preloadBatch, images.length); i++) {
                         const img = new Image();
-                        img.decoding = 'async';
                         const promise = new Promise((resolve) => {
                             img.onload = resolve;
                             img.onerror = () => {
+                                console.log(`Trying backup URL for ${images[i].name}`);
                                 img.src = images[i].backupUrl;
                             };
                             img.src = images[i].url;
@@ -611,15 +611,29 @@
                         preloadedImages.set(images[i].url, img);
                     }
 
+                    // 等待第一张图片加载完成
                     await imagePromises[0];
                     hideLoading(loadingOverlay);
-                   
+
+                    // 创建并显示图片容器
+                    const container = document.createElement('div');
+                    container.id = 'image-container';
+                    document.body.appendChild(container);
+
                     // 显示移动端滑动提示
                     if (window.innerWidth <= 768) {
                         showSwipeHint();
                     }
                     showImage(0);
+
+                    // 后台加载其他图片
+                    Promise.all(imagePromises.slice(1)).then(() => {
+                        console.log('Initial batch loaded');
+                    });
                 }
+            } catch (error) {
+                console.error('Error loading images:', error);
+                hideLoading(loadingOverlay);
             } finally {
                 setTimeout(() => hideLoading(loadingOverlay), 1500);
             }
@@ -648,11 +662,8 @@
             if (!images[index]) return;
 
             const currentImage = images[index];
-            if (!preloadedImages.has(currentImage.url)) {
-                const img = new Image();
-                img.src = currentImage.url;
-                preloadedImages.set(currentImage.url, img);
-            }
+            const container = document.getElementById('image-container');
+            if (!container) return;
 
             // 清理旧的图片缓存
             cleanupImageCache();
@@ -664,70 +675,28 @@
             }
 
             setTimeout(() => {
-                imageContainer.innerHTML = '';
-                const container = document.createElement('div');
-                container.className = 'image-container';
-                container.style.opacity = '1';
+                container.innerHTML = '';
+                const newContainer = document.createElement('div');
+                newContainer.className = 'image-container';
 
                 const card = document.createElement('div');
                 card.className = 'image-card';
 
                 const img = document.createElement('img');
-                img.decoding = 'async';
-                img.loading = 'eager';
-                img.sizes = `(max-width: 768px) 100vw, ${Math.min(window.innerWidth, 800)}px`;
-
-                // 使用已缓存的图片
-                const cachedImg = preloadedImages.get(currentImage.url);
-                img.src = cachedImg.src;
-
-                img.onload = () => {
-                    // 检查是否为长图
-                    if (img.naturalHeight > window.innerHeight * 1.5) {
-                        const scrollHint = document.createElement('div');
-                        scrollHint.className = 'scroll-hint';
-                        scrollHint.textContent = '上下滑动查看完整内容';
-                        scrollHint.style.opacity = '1';
-                        card.appendChild(scrollHint);
-
-                        // 3秒后隐藏提示
-                        setTimeout(() => {
-                            scrollHint.style.opacity = '0';
-                        }, 3000);
-                    }
-                };
-
+                img.src = currentImage.url;
                 card.appendChild(img);
-                container.appendChild(card);
 
                 // 添加滑动提示
                 const hint = document.createElement('div');
                 hint.className = 'swipe-hint';
-                hint.style.opacity = '1';  // 确保提示可见
+                hint.innerHTML = `
+                    <span class="left-button">👈 ${getRandomText(false)}</span>
+                    <span class="right-button">${getRandomText(true)} 👉</span>
+                `;
 
-                const leftSpan = document.createElement('span');
-                leftSpan.className = 'left-button';
-                leftSpan.innerHTML = `👈 ${getRandomText(false)}`;
-                leftSpan.onclick = () => {
-                    currentIndex++;
-                    showImage(currentIndex);
-                    checkAndResetImages();
-                };
-
-                const rightSpan = document.createElement('span');
-                rightSpan.className = 'right-button';
-                rightSpan.innerHTML = `${getRandomText(true)} 👉`;
-                rightSpan.onclick = () => {
-                    currentIndex++;
-                    funnyCount++;
-                    showImage(currentIndex);
-                    checkAndResetImages();
-                };
-
-                hint.appendChild(leftSpan);
-                hint.appendChild(rightSpan);
-                container.appendChild(hint);
-                imageContainer.appendChild(container);
+                newContainer.appendChild(card);
+                newContainer.appendChild(hint);
+                container.appendChild(newContainer);
             }, oldContainer ? 250 : 0);
 
             // 使用 requestIdleCallback 在空闲时预加载

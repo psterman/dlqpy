@@ -563,11 +563,11 @@
 
                 const files = await response.json();
 
-                // 过滤出图片文件
+                // 过滤出图片文件并转换 URL
                 images = files
                     .filter(file => file.name.match(/\.(jpg|jpeg|png|gif)$/i))
                     .map(file => ({
-                        url: file.download_url,
+                        url: `https://cdn.jsdelivr.net/gh/${owner}/${repo}@main/${path}/${file.name}`,
                         name: file.name
                     }));
 

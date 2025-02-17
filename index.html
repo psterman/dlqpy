@@ -655,7 +655,7 @@
             "朕喜欢 👍",
             "可 👍",
             "准奏 👍",
-            "朕觉得行 ��",
+            "朕觉得行",
             "有意思 👍",
             "爱卿用心了 👍",
             "朕很满意 👍",
@@ -663,15 +663,15 @@
             "朕笑了 👍",
             "爱卿懂朕 👍",
             "深得朕心 👍",
-            "这个有趣 ��",
+            "这个有趣",
             "朕要赏你 👍",
             "甚合朕意 👍",
             "爱卿费心了 👍",
             "这个朕喜欢 👍",
             "朕龙心大悦 👍",
             "这个有水平 👍",
-            "爱卿很用心 ��",
-            "这个朕准了 ��",
+            "爱卿很用心",
+            "这个朕准了",
             "朕要重赏 👍",
             "这个有意思 👍",
             "朕觉得不错 👍",
@@ -826,7 +826,7 @@
 
                 const rightSpan = document.createElement('span');
                 rightSpan.className = 'right-button';
-                rightSpan.innerHTML = `${getRandomText(true)} ��`;
+                rightSpan.innerHTML = `${getRandomText(true)} 👉`;
 
                 hint.appendChild(leftSpan);
                 hint.appendChild(rightSpan);
@@ -1279,9 +1279,15 @@
                 display: flex;
                 justify-content: center;
                 gap: 20px;
+                pointer-events: none;  // 让提示不影响图片交互
             }
 
             @media (max-width: 768px) {
+                .image-container {
+                    height: calc(100vh - 100px) !important;  // 留出底部提示空间
+                    padding-bottom: 60px;  // 确保图片不被提示遮挡
+                }
+
                 .swipe-hint span {
                     min-width: 100px;
                     background-color: rgba(255, 255, 255, 0.9);
@@ -1292,6 +1298,7 @@
                     border-radius: 20px;
                     text-align: center;
                     box-shadow: 0 2px 10px var(--shadow-color);
+                    pointer-events: auto;  // 恢复提示的交互能力
                 }
 
                 [data-theme="dark"] .swipe-hint span {
@@ -1304,6 +1311,19 @@
                
                 .mobile-hint span:active {
                     transform: scale(0.95);
+                }
+
+                .image-card {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                }
+
+                .image-card img {
+                    max-height: calc(100vh - 160px);  // 确保图片不会被提示遮挡
+                    width: auto;
+                    object-fit: contain;
                 }
             }
         `;

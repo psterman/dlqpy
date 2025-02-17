@@ -648,20 +648,29 @@
                         name: file.name
                     }));
 
-                console.log(`加载了 ${images.length} 张图片`);
-
                 if (images.length > 0) {
-                    images = _.shuffle(images);
-                    // 预加载第一张图片
-                    const firstImage = new Image();
-                    firstImage.src = images[0].url;
-                    preloadedImages.set(images[0].url, firstImage);
-                    // 预加载第二张图片
-                    preloadNextImage(0);
-                    showImage(0);
+                    // 先显示第一张，然后再打乱顺序
+                    const firstImage = images[0];
+                    images = [firstImage, ..._.shuffle(images.slice(1))];
+                    
+                    // 立即加载第一张图片
+                    const img = new Image();
+                    img.src = firstImage.url;
+                    img.onload = () => {
+                        hideLoading(loadingOverlay);
+                        showImage(0);
+                        // 加载完第一张后再预加载其他图片
+                        for (let i = 1; i < Math.min(4, images.length); i++) {
+                            const img = new Image();
+                            img.src = images[i].url;
+                            preloadedImages.set(images[i].url, img);
+                        }
+                    };
+                    preloadedImages.set(firstImage.url, img);
                 }
             } finally {
-                hideLoading(loadingOverlay);
+                // 如果5秒后还没加载完，也隐藏loading
+                setTimeout(() => hideLoading(loadingOverlay), 5000);
             }
         }
 
@@ -687,58 +696,24 @@
         function showImage(index) {
             const oldContainer = document.querySelector('.image-container');
             if (oldContainer) {
-                // 根据滑动方向选择动画
                 oldContainer.style.animation = `${currentX > startX ? 'slideOutRight' : 'slideOutLeft'} 0.3s forwards`;
                 setTimeout(() => oldContainer.remove(), 300);
             }
 
             setTimeout(() => {
                 imageContainer.innerHTML = '';
-
                 const container = document.createElement('div');
                 container.className = 'image-container';
-                container.style.opacity = '0';
-                container.style.animation = 'fadeIn 0.3s ease-out forwards';
+                container.style.opacity = '1';  // 直接显示，不需要淡入动画
 
                 const card = document.createElement('div');
                 card.className = 'image-card';
 
                 const img = document.createElement('img');
-                // 添加图片加载错误处理
-                img.onerror = () => {
-                    // 错误提示文案
-                    const errorTexts = [
-                        "这份奏折似乎遗失在宫中了...",
-                        "御前总管偷懒没有及时送达...",
-                        "这份奏折被茶水浸湿了，待朕找太监重新誊抄...",
-                        "这份奏折被昨晚的风吹走了，容奴才去寻找...",
-                        "这份奏折被皇后娘娘拿去垫桌脚了...",
-                        "这份奏折被小太监当成手纸用了...",
-                        "这份奏折被贪玩的小皇子撕了，朕重新找人誊抄...",
-                        "这份奏折被宫女不小心扫进垃圾堆了...",
-                        "这份奏折被粘在一起了，容奴才分开...",
-                        "这份奏折被太监放错地方了，待朕派人找找..."
-                    ];
-
-                    // 显示错误信息
-                    const errorMsg = document.createElement('div');
-                    errorMsg.className = 'error-message';
-                    errorMsg.textContent = errorTexts[Math.floor(Math.random() * errorTexts.length)];
-                    card.appendChild(errorMsg);
-
-                    // 显示下一张按钮
-                    const nextButton = document.createElement('button');
-                    nextButton.className = 'next-button';
-                    nextButton.textContent = '下一份奏折';
-                    nextButton.onclick = () => {
-                        currentIndex++;
-                        showImage(currentIndex);
-                        checkAndResetImages();
-                    };
-                    document.body.appendChild(nextButton);
-                };
-
-                // 使用预加载的图片（如果有）
+                img.decoding = 'async';
+                img.loading = 'eager';
+                img.sizes = '(max-width: 768px) 100vw, 800px';  // 提示浏览器图片显示尺寸
+                
                 const currentImage = images[index];
                 if (preloadedImages.has(currentImage.url)) {
                     img.src = preloadedImages.get(currentImage.url).src;
@@ -806,6 +781,9 @@
             if (oldHint) {
                 oldHint.remove();
             }
+
+            // 在显示新图片的同时预加载后面的图片
+            preloadNextImages(index);
         }
 
         function getRandomText(isLike) {
@@ -900,22 +878,30 @@
         }
 
         function handleMove(e) {
+            if (!isMoving) return;
+            e.preventDefault();
             currentX = e.touches[0].clientX;
             const diff = currentX - startX;
             const card = document.querySelector('.image-card');
-            card.style.transform = `translateX(${diff}px)`;
+            if (card) {
+                requestAnimationFrame(() => {
+                    card.style.transform = `translateX(${diff}px)`;
+                });
+            }
         }
 
         function handleMouseMove(e) {
             if (!isMouseDown) return;
-            e.preventDefault();  // 防止拖动时选中文本
-            e.stopPropagation(); // 阻止事件冒泡
+            e.preventDefault();
+            e.stopPropagation();
 
             currentX = e.clientX;
             const diff = currentX - startX;
             const card = document.querySelector('.image-card');
             if (card) {
-                card.style.transform = `translateX(${diff}px)`;
+                requestAnimationFrame(() => {
+                    card.style.transform = `translateX(${diff}px)`;
+                });
             }
         }
 
@@ -1008,14 +994,16 @@
         }
 
         // 预加载下一张图片
-        function preloadNextImage(index) {
-            const nextIndex = (index + 1) % images.length;
-            const nextImage = images[nextIndex];
-
-            if (!preloadedImages.has(nextImage.url)) {
-                const img = new Image();
-                img.src = nextImage.url;
-                preloadedImages.set(nextImage.url, img);
+        function preloadNextImages(currentIndex) {
+            const preloadCount = 3;  // 预加载后面3张
+            for (let i = 1; i <= preloadCount; i++) {
+                const nextIndex = (currentIndex + i) % images.length;
+                const nextImage = images[nextIndex];
+                if (!preloadedImages.has(nextImage.url)) {
+                    const img = new Image();
+                    img.src = nextImage.url;
+                    preloadedImages.set(nextImage.url, img);
+                }
             }
         }
 

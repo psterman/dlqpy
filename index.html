@@ -93,7 +93,7 @@
 
         .image-card {
             background-color: var(--card-bg);
-            width: 100%;  /* 改为100%宽度 */
+            width: 100%;
             margin: 0 auto;
             position: relative;
             animation: fadeIn 0.3s ease-out;
@@ -104,18 +104,36 @@
             overflow-x: hidden;
             padding: 10px;
             box-sizing: border-box;
-            height: 100%;
+            height: 100%; /* 保持容器高度100% */
             -webkit-overflow-scrolling: touch;
             scroll-behavior: smooth;
             scrollbar-width: none;
+            touch-action: pan-y; /* 允许垂直滚动 */
         }
 
         .image-card::-webkit-scrollbar {
-            display: none; /* Chrome, Safari and Opera */
+            width: 6px;
+        }
+
+        .image-card::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .image-card::-webkit-scrollbar-thumb {
+            background-color: var(--text-color);
+            border-radius: 3px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* 只在滚动时显示滚动条 */
+        .image-card:hover::-webkit-scrollbar-thumb,
+        .image-card:active::-webkit-scrollbar-thumb {
+            opacity: 0.3;
         }
 
         .image-card img {
-            width: 100%;  /* 图片宽度始终100% */
+            width: 100%;
             height: auto;
             object-fit: contain;
             display: block;
@@ -291,6 +309,7 @@
             min-width: min(120px, 25vw);
             border: 1px solid var(--text-color);
             background: linear-gradient(to bottom, var(--counter-bg), var(--card-bg));
+            content: attr(data-text);
         }
 
         .exit-button {
@@ -503,6 +522,8 @@
 </head>
 
 <body>
+    <button class="theme-toggle">大佬请护目 🌞</button>
+    <button class="exit-button">退朝</button>
     <div id="image-container"></div>
 
     <script>
@@ -921,47 +942,32 @@
                 tempImg.src = cachedImg.src;
                 
                 tempImg.onload = () => {
-                    const viewportHeight = window.innerHeight - 120; // 减去按钮和padding空间
-                    
-                    // 计算图片在容器宽度下的实际显示高度
+                    const viewportHeight = window.innerHeight - 120;
                     const displayHeight = (tempImg.naturalHeight / tempImg.naturalWidth) * window.innerWidth;
                     
                     // 只要图片显示高度超过视口高度，就视为长图
                     if (displayHeight > viewportHeight) {
                         // 长图处理
-                        card.style.overflowY = 'scroll';
+                        card.style.overflowY = 'auto';
+                        card.style.height = '100%';
+                        card.style.alignItems = 'flex-start';
                         img.style.width = '100%';
+                        img.style.height = 'auto';
                         
-                        // 添加滚动提示
-                        const scrollHint = document.createElement('div');
-                        scrollHint.className = 'scroll-hint';
-                        scrollHint.textContent = '上下滑动查看完整图片';
-                        scrollHint.style.cssText = `
-                            position: fixed;
-                            top: 50%;
-                            left: 50%;
-                            transform: translate(-50%, -50%);
-                            background-color: var(--counter-bg);
-                            padding: 10px 20px;
-                            border-radius: 20px;
-                            font-size: 14px;
-                            color: var(--text-color);
-                            opacity: 0.8;
-                            transition: opacity 0.3s;
-                            z-index: 1002;
-                        `;
-                        document.body.appendChild(scrollHint);
+                        // 移除可能影响滚动的样式
+                        card.style.position = 'relative';
+                        card.style.maxHeight = 'none';
                         
-                        setTimeout(() => {
-                            scrollHint.style.opacity = '0';
-                            setTimeout(() => scrollHint.remove(), 300);
-                        }, 1500);
+                        // 确保容器可以滚动
+                        card.style.touchAction = 'pan-y';
+                        card.style.webkitOverflowScrolling = 'touch';
                     } else {
                         // 普通图片处理
                         card.style.overflowY = 'hidden';
                         card.style.alignItems = 'center';
+                        card.style.height = '100%';
                         img.style.width = '100%';
-                        img.style.maxHeight = `${viewportHeight}px`; // 限制高度不超过视口
+                        img.style.maxHeight = `${viewportHeight}px`;
                     }
                     
                     img.src = cachedImg.src;
@@ -1320,30 +1326,23 @@
             // 主题设置初始化
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
+            document.body.setAttribute('data-theme', savedTheme);
 
-            const themeToggle = document.createElement('button');
-            themeToggle.className = 'theme-toggle';
-            themeToggle.textContent = savedTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
-            themeToggle.onclick = toggleTheme;
-            document.body.appendChild(themeToggle);
-
-            // 添加退出按钮
-            const exitButton = document.createElement('button');
-            exitButton.className = 'exit-button';
-            exitButton.textContent = '退朝';
-            exitButton.onclick = showExitStats;
-            document.body.appendChild(exitButton);
-        });
-
-        // 主题切换功能
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
+            // 获取已经存在的主题切换按钮
             const themeToggle = document.querySelector('.theme-toggle');
-            themeToggle.textContent = newTheme === 'dark' ? '🌞 切换亮色' : '🌙 切换暗色';
-        }
+            themeToggle.textContent = savedTheme === 'dark' ? '大佬请明目 🌙' : '大佬请护目 🌞';
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+                document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+                themeToggle.textContent = isDark ? '大佬请护目 🌞' : '大佬请明目 🌙';
+                localStorage.setItem('theme', isDark ? 'light' : 'dark');
+            });
+
+            // 获取已经存在的退出按钮
+            const exitButton = document.querySelector('.exit-button');
+            exitButton.onclick = showExitStats;
+        });
 
         // 防止滑动过程中触发其他事件
         imageContainer.addEventListener('click', (e) => {

@@ -2,6 +2,7 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
     <title>大佬请批阅</title>
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
     <style>
@@ -41,44 +42,120 @@
             z-index: -1;
         }
 
-        /* 保留原有样式 */
+        /* 修改 swipe-hint 相关样式 */
+        .swipe-hint {
+            position: fixed !important;
+            bottom: 20px !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1000;
+            opacity: 1;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            background: none !important;
+            padding: 0 20px;
+        }
+
+        .swipe-hint span {
+            min-width: 120px;
+            background-color: var(--counter-bg);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            padding: 15px 25px;
+            font-size: 16px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            pointer-events: auto;
+            z-index: 1001;
+            position: relative;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.3s ease;
+            border: 1px solid var(--text-color);
+        }
+
+        /* 修改图片容器样式 */
         .image-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             margin: 0;
-            width: 100%;
-            height: 100vh;
-            /* 填充整个屏幕高度 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100vw;
+            height: calc(100vh - 100px); /* 留出底部按钮空间 */
+            overflow: hidden; /* 改为 hidden，让内部 card 处理滚动 */
         }
 
         .image-card {
             background-color: var(--card-bg);
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: auto;
             margin: 0;
             position: relative;
             animation: fadeIn 0.3s ease-out;
             display: flex;
-            align-items: center;
+            align-items: flex-start; /* 改为 flex-start，让内容从顶部开始 */
             justify-content: center;
-            overflow: hidden;
-            overflow-y: auto;
+            overflow-x: hidden;
+            overflow-y: auto; /* 只允许垂直滚动 */
         }
 
         .image-card img {
-            width: 100%;
+            width: 100vw;
             height: auto;
             object-fit: contain;
-            /* 保持比例完整显示 */
             display: block;
-            touch-action: pinch-zoom;
-            /* 允许手势缩放 */
-            -webkit-user-select: none;
-            user-select: none;
+        }
+
+        /* 修改滚动条样式 */
+        .image-card::-webkit-scrollbar {
+            width: 8px;
+            height: 0;
+        }
+
+        .image-card::-webkit-scrollbar-track {
+            background: var(--bg-color);
+            border-radius: 4px;
+        }
+
+        .image-card::-webkit-scrollbar-thumb {
+            background: var(--text-color);
+            opacity: 0.3;
+            border-radius: 4px;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .image-container {
+                height: calc(100vh - 80px);
+            }
+
+            .image-card {
+                width: 100vw;
+                padding: 0;
+            }
+
+            .image-card img {
+                width: 100vw;
+                max-width: 100vw;
+                margin: 0;
+            }
+        }
+
+        /* 修改放大模式样式 */
+        .image-card.zoom-mode {
+            overflow: hidden !important;
+            height: 100% !important;
+        }
+
+        .image-card img.zoomed {
+            max-width: none !important;
+            width: auto !important;
         }
 
         #folder-input {
@@ -118,64 +195,6 @@
             font-size: 18px;
             margin-top: 20px;
             text-align: center;
-        }
-
-        .swipe-hint {
-            position: absolute;
-            bottom: 20px;
-            z-index: 10;
-            padding: 0 10px;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            cursor: pointer;
-            user-select: none;
-            margin: 0 auto;
-            opacity: 0;
-            animation: fadeIn 0.3s ease-out 0.3s forwards;
-        }
-
-        .swipe-hint span {
-            padding: 5px 10px;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-            background-color: var(--card-bg);
-            border: 1px solid var(--text-color);
-            box-shadow: 0 2px 10px var(--shadow-color);
-            min-width: 120px;
-            text-align: center;
-        }
-
-        .swipe-hint span:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px var(--shadow-color);
-        }
-
-        /* 点击波纹效果 */
-        .swipe-hint span::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: var(--text-color);
-            opacity: 0.2;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.3s, height 0.3s;
-        }
-
-        .swipe-hint span:active::after {
-            width: 100px;
-            height: 100px;
-        }
-
-        /* 点击缩放效果 */
-        .swipe-hint span:active {
-            transform: scale(0.95);
         }
 
         .theme-toggle {
@@ -404,90 +423,21 @@
             }
         }
 
-        /* 移动端样式 */
-        @media (max-width: 768px) {
-            .image-container {
-                height: 100vh !important;
-                padding-bottom: 100px;
-                position: relative;
-                overflow: auto;
-                scroll-behavior: smooth;
-            }
-
-            .image-card {
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                min-height: calc(100vh - 100px);
-            }
-
-            .image-card img {
-                width: auto;
-                max-width: 100%;
-                height: auto;
-                object-fit: scale-down;
-                max-width: none;
-                max-height: none;
-                touch-action: pan-y pinch-zoom;
-                -webkit-user-select: none;
-                user-select: none;
-                margin: 10px auto;
-            }
-
-            /* 添加长图提示 */
-            .scroll-hint {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background-color: rgba(255, 255, 255, 0.9);
-                padding: 10px 20px;
-                border-radius: 20px;
-                font-size: 14px;
-                z-index: 1000;
-                pointer-events: none;
-                animation: fadeInOut 2s forwards;
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
-            }
-
-            .swipe-hint {
-                position: fixed !important;
-                bottom: 40px !important;
-                left: 0 !important;
-                right: 0 !important;
-                z-index: 1001;
-                background-color: var(--bg-color);
-            }
-
-            .error-hint {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background-color: rgba(255, 255, 255, 0.9);
-                padding: 15px 30px;
-                border-radius: 10px;
-                z-index: 2000;
-            }
-        }
-
-        /* 自定义滚动条样式 */
-        .image-card::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .image-card::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .image-card::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
+        /* 修改放大提示 */
+        .zoom-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--counter-bg);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--text-color);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1002;
         }
     </style>
 </head>
@@ -908,19 +858,28 @@
                 const cachedImg = preloadedImages.get(currentImage.url);
                 img.src = cachedImg.src;
 
-                // 检测长图并添加提示
-                img.onload = () => {
-                    if (img.naturalHeight > window.innerHeight * 1.2) {
-                        const scrollHint = document.createElement('div');
-                        scrollHint.className = 'scroll-hint';
-                        scrollHint.textContent = '上下滑动查看完整图片';
-                        document.body.appendChild(scrollHint);
+                // 检查图片是否需要滚动
+                const imageHeight = img.naturalHeight * (window.innerWidth / img.naturalWidth);
+                const viewportHeight = window.innerHeight - 100; // 减去按钮空间
 
-                        setTimeout(() => {
-                            scrollHint.remove();
-                        }, 2000);
-                    }
-                };
+                if (imageHeight > viewportHeight) {
+                    card.style.height = '100%';
+                    card.style.overflowY = 'auto';
+                    
+                    // 可选：添加滚动提示
+                    const scrollHint = document.createElement('div');
+                    scrollHint.className = 'scroll-hint';
+                    scrollHint.textContent = '上下滑动查看完整图片';
+                    document.body.appendChild(scrollHint);
+
+                    setTimeout(() => {
+                        scrollHint.remove();
+                    }, 2000);
+                } else {
+                    card.style.height = 'auto';
+                    card.style.overflowY = 'hidden';
+                    card.style.alignItems = 'center'; // 短图居中显示
+                }
 
                 card.appendChild(img);
                 container.appendChild(card);
@@ -929,6 +888,10 @@
 
                 // 更新滑动提示
                 updateSwipeHint();
+
+                setTimeout(() => {
+                    initializeImageZoom();
+                }, 300);
             }, oldContainer ? 250 : 0);
 
             preloadNextImages(index);
@@ -1059,9 +1022,7 @@
         }
 
         function handleEnd(e) {
-            if (isScrolling) return;  // 如果正在滚动，不触发切换
-            // 如果不是滑动状态或没有移动，直接返回
-            if (!isMoving || currentX === startX) return;
+            if (!isMoving) return;
             isMoving = false;
 
             const diff = currentX - startX;
@@ -1069,7 +1030,6 @@
             const timeElapsed = Date.now() - startTime;
             const velocity = Math.abs(diff) / Math.max(timeElapsed, 1);
 
-            // 降低滑动阈值，使鼠标操作更容易触发
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
                 if (diff > 0) {  // 右滑表示喜欢
                     currentIndex++;
@@ -1077,6 +1037,7 @@
                 } else {  // 左滑表示不喜欢
                     currentIndex++;
                 }
+                
                 // 添加动画效果
                 const card = document.querySelector('.image-card');
                 if (card) {
@@ -1085,6 +1046,8 @@
                     setTimeout(() => {
                         showImage(currentIndex);
                         checkAndResetImages();
+                        // 重新加载按钮文案
+                        updateSwipeHint();
                     }, 200);
                 }
             } else {
@@ -1105,37 +1068,32 @@
             isMouseDown = false;
             isMoving = false;
 
-            // 恢复默认鼠标样式
-            const card = document.querySelector('.image-card');
-            if (card) {
-                card.style.cursor = 'grab';
-            }
-
-            // 处理鼠标滑动结束
             const diff = e.clientX - startX;
             const threshold = window.innerWidth * 0.2;
             const timeElapsed = Date.now() - startTime;
             const velocity = Math.abs(diff) / Math.max(timeElapsed, 1);
 
-            // 降低滑动阈值，使鼠标操作更容易触发
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
-                if (diff > 0) {  // 右滑表示喜欢
+                if (diff > 0) {
                     currentIndex++;
                     funnyCount++;
-                } else {  // 左滑表示不喜欢
+                } else {
                     currentIndex++;
                 }
-                // 添加动画效果
+                
+                const card = document.querySelector('.image-card');
                 if (card) {
                     card.style.transition = 'transform 0.2s ease-out';
                     card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
                     setTimeout(() => {
                         showImage(currentIndex);
                         checkAndResetImages();
+                        // 重新加载按钮文案
+                        updateSwipeHint();
                     }, 200);
                 }
             } else {
-                // 恢复原位的动画
+                const card = document.querySelector('.image-card');
                 if (card) {
                     card.style.transition = 'transform 0.2s ease-out';
                     card.style.transform = 'translateX(0)';
@@ -1439,7 +1397,7 @@
         `;
         document.head.appendChild(style);
 
-        // 添加更新滑动提示的函数
+        // 修改更新滑动提示的函数
         function updateSwipeHint() {
             const oldHint = document.querySelector('.swipe-hint');
             if (oldHint) {
@@ -1452,35 +1410,143 @@
             const leftSpan = document.createElement('span');
             leftSpan.className = 'left-button';
             leftSpan.innerHTML = `👈 ${getRandomText(false)}`;
-            leftSpan.addEventListener('click', () => {
-                currentIndex++;
-                // 记录不喜欢
-                if (window.localStorage) {
-                    const dislikeCount = parseInt(localStorage.getItem('dislikeCount') || '0');
-                    localStorage.setItem('dislikeCount', dislikeCount + 1);
-                }
-                showImage(currentIndex);
-                checkAndResetImages();
-            });
-
+            
             const rightSpan = document.createElement('span');
             rightSpan.className = 'right-button';
             rightSpan.innerHTML = `${getRandomText(true)} 👉`;
+
+            // 修改点击事件处理
+            leftSpan.addEventListener('click', () => {
+                // 显示❎动画
+                leftSpan.innerHTML = '❎';
+                leftSpan.style.transform = 'translateX(-50%) scale(1.2)';
+                rightSpan.style.opacity = '0.5';
+                
+                // 延迟执行切换图片
+                setTimeout(() => {
+                    currentIndex++;
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                    
+                    // 重新加载按钮文案
+                    updateSwipeHint();
+                }, 300);
+            });
+
             rightSpan.addEventListener('click', () => {
-                currentIndex++;
-                funnyCount++;
-                // 记录喜欢
-                if (window.localStorage) {
-                    const likeCount = parseInt(localStorage.getItem('likeCount') || '0');
-                    localStorage.setItem('likeCount', likeCount + 1);
-                }
-                showImage(currentIndex);
-                checkAndResetImages();
+                // 显示❤️动画
+                rightSpan.innerHTML = '❤️';
+                rightSpan.style.transform = 'translateX(50%) scale(1.2)';
+                leftSpan.style.opacity = '0.5';
+                
+                // 延迟执行切换图片
+                setTimeout(() => {
+                    currentIndex++;
+                    funnyCount++;
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                    
+                    // 重新加载按钮文案
+                    updateSwipeHint();
+                }, 300);
             });
 
             hint.appendChild(leftSpan);
             hint.appendChild(rightSpan);
             document.body.appendChild(hint);
+        }
+
+        function initializeImageZoom() {
+            const imageCard = document.querySelector('.image-card');
+            const img = imageCard.querySelector('img');
+            let isZoomed = false;
+            let isDragging = false;
+            let startX, startY, translateX = 0, translateY = 0;
+            let lastTapTime = 0;
+
+            // 显示放大提示
+            function showZoomHint() {
+                const hint = document.createElement('div');
+                hint.className = 'zoom-hint';
+                hint.textContent = '点击图片可放大';
+                document.body.appendChild(hint);
+                setTimeout(() => {
+                    hint.style.opacity = '1';
+                    setTimeout(() => {
+                        hint.style.opacity = '0';
+                        setTimeout(() => hint.remove(), 300);
+                    }, 2000);
+                }, 100);
+            }
+
+            // 初始显示提示
+            showZoomHint();
+
+            // 双击切换放大状态
+            img.addEventListener('click', (e) => {
+                const currentTime = Date.now();
+                if (currentTime - lastTapTime < 300) { // 双击判断
+                    isZoomed = !isZoomed;
+                    if (isZoomed) {
+                        img.classList.add('zoomed');
+                        imageCard.classList.add('zoom-mode');
+                        // 将放大中心点设置为点击位置
+                        const rect = img.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width;
+                        const y = (e.clientY - rect.top) / rect.height;
+                        img.style.transformOrigin = `${x * 100}% ${y * 100}%`;
+                    } else {
+                        img.classList.remove('zoomed');
+                        imageCard.classList.remove('zoom-mode');
+                        img.style.transform = '';
+                        translateX = 0;
+                        translateY = 0;
+                    }
+                }
+                lastTapTime = currentTime;
+            });
+
+            // 拖动功能
+            img.addEventListener('mousedown', (e) => {
+                if (!isZoomed) return;
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                img.style.transition = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                img.style.transform = `scale(2) translate(${translateX}px, ${translateY}px)`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                img.style.transition = 'transform 0.3s ease';
+            });
+
+            // 移动端触摸支持
+            img.addEventListener('touchstart', (e) => {
+                if (!isZoomed) return;
+                isDragging = true;
+                startX = e.touches[0].clientX - translateX;
+                startY = e.touches[0].clientY - translateY;
+                img.style.transition = 'none';
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                translateX = e.touches[0].clientX - startX;
+                translateY = e.touches[0].clientY - startY;
+                img.style.transform = `scale(2) translate(${translateX}px, ${translateY}px)`;
+            });
+
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+                img.style.transition = 'transform 0.3s ease';
+            });
         }
     </script>
 </body>

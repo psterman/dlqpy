@@ -94,7 +94,7 @@
         .image-card {
             background-color: var(--card-bg);
             width: 100%;
-            margin: 0 auto;
+            margin: 0;
             position: relative;
             animation: fadeIn 0.3s ease-out;
             display: flex;
@@ -102,13 +102,12 @@
             justify-content: center;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 10px;
+            padding: 0;  /* 移除内边距 */
             box-sizing: border-box;
-            height: 100%; /* 保持容器高度100% */
+            height: 100%;
             -webkit-overflow-scrolling: touch;
             scroll-behavior: smooth;
             scrollbar-width: none;
-            touch-action: pan-y; /* 允许垂直滚动 */
         }
 
         .image-card::-webkit-scrollbar {
@@ -133,10 +132,11 @@
         }
 
         .image-card img {
-            width: 100%;
+            width: 100%;  /* 图片宽度100% */
             height: auto;
             object-fit: contain;
             display: block;
+            margin: 0;
         }
 
         /* PC端滚动条样式 */
@@ -942,21 +942,30 @@
                 tempImg.src = cachedImg.src;
                 
                 tempImg.onload = () => {
-                    const viewportHeight = window.innerHeight - 120;
-                    const displayHeight = (tempImg.naturalHeight / tempImg.naturalWidth) * window.innerWidth;
+                    // 获取图片原始尺寸
+                    const imgNaturalWidth = tempImg.naturalWidth;
+                    const imgNaturalHeight = tempImg.naturalHeight;
                     
-                    // 只要图片显示高度超过视口高度，就视为长图
-                    if (displayHeight > viewportHeight) {
+                    // 获取视口尺寸（减去按钮和边距空间）
+                    const viewportHeight = window.innerHeight - 100;
+                    const viewportWidth = window.innerWidth;
+                    
+                    // 计算图片的宽高比
+                    const aspectRatio = imgNaturalHeight / imgNaturalWidth;
+                    
+                    // 如果图片原始高度超过原始宽度的2倍，就认为是长图
+                    if (aspectRatio > 2) {
                         // 长图处理
                         card.style.overflowY = 'auto';
                         card.style.height = '100%';
-                        card.style.alignItems = 'flex-start';
                         img.style.width = '100%';
                         img.style.height = 'auto';
+                        card.style.alignItems = 'flex-start';
                         
                         // 移除可能影响滚动的样式
                         card.style.position = 'relative';
                         card.style.maxHeight = 'none';
+                        card.style.padding = '0';
                         
                         // 确保容器可以滚动
                         card.style.touchAction = 'pan-y';
@@ -966,8 +975,18 @@
                         card.style.overflowY = 'hidden';
                         card.style.alignItems = 'center';
                         card.style.height = '100%';
-                        img.style.width = '100%';
-                        img.style.maxHeight = `${viewportHeight}px`;
+                        card.style.padding = '10px';
+                        
+                        // 根据图片比例决定是否限制宽度
+                        if (aspectRatio < 1) {
+                            // 横图：限制高度
+                            img.style.height = `${viewportHeight}px`;
+                            img.style.width = 'auto';
+                        } else {
+                            // 竖图：限制宽度
+                            img.style.width = '100%';
+                            img.style.height = 'auto';
+                        }
                     }
                     
                     img.src = cachedImg.src;
@@ -1602,6 +1621,117 @@
                 leftButton.style.transition = `all ${duration}ms ease`;
                 rightButton.style.transition = `all ${duration}ms ease`;
             }
+        }
+
+        // 修改评价文案函数
+        function getEvaluationText(funnyRate) {
+            const evaluations = [
+                // 90-100%
+                {
+                    min: 90,
+                    texts: [
+                        "大佬的品味简直就是传说级别！小的五体投地！",
+                        "大佬的眼光堪比秦始皇的千里眼，绝绝子！",
+                        "大佬这品味，怕是下凡的观音菩萨吧！",
+                        "大佬的鉴赏水平已经突破天际了，小的自愧不如！"
+                    ]
+                },
+                // 80-89%
+                {
+                    min: 80,
+                    texts: [
+                        "大佬的品味比珠穆朗玛峰还要高，小的仰望不及！",
+                        "大佬这眼光，简直就是当代的李白附体啊！",
+                        "大佬的鉴赏能力已经到达了化境，小的五体投地！",
+                        "大佬这品味，怕是转世的文化部部长吧！"
+                    ]
+                },
+                // 70-79%
+                {
+                    min: 70,
+                    texts: [
+                        "大佬的品位比国宝还要珍贵，小的膜拜ing！",
+                        "大佬这审美水平，简直就是当代的梵高转世！",
+                        "大佬的眼光比特斯拉的股票还要高！起飞！",
+                        "大佬的鉴赏水平已经到达了人类的极限！"
+                    ]
+                },
+                // 60-69%
+                {
+                    min: 60,
+                    texts: [
+                        "大佬的品味比茅台还要醇香，小的陶醉了！",
+                        "大佬这眼光，简直就是文艺复兴再现！",
+                        "大佬的鉴赏能力已经达到了天人合一的境界！",
+                        "大佬这审美，怕是下凡的文艺女神吧！"
+                    ]
+                },
+                // 50-59%
+                {
+                    min: 50,
+                    texts: [
+                        "大佬的品味独树一帜，小的自叹不如！",
+                        "大佬这眼光，简直就是当代的艺术家！",
+                        "大佬的鉴赏水平已经超越了常人的认知！",
+                        "大佬这审美，简直就是人间绝品！"
+                    ]
+                },
+                // 40-49%
+                {
+                    min: 40,
+                    texts: [
+                        "大佬的品味清新脱俗，小的佩服得五体投地！",
+                        "大佬这眼光，简直就是一道亮丽的风景线！",
+                        "大佬的鉴赏能力已经到达了返璞归真的境界！",
+                        "大佬这审美，怕是得到了神仙的指点吧！"
+                    ]
+                },
+                // 30-39%
+                {
+                    min: 30,
+                    texts: [
+                        "大佬的品味如清泉般纯净，小的心服口服！",
+                        "大佬这眼光，简直就是一股清流！",
+                        "大佬的鉴赏水平已经超越了世俗的眼界！",
+                        "大佬这审美，简直就是一道靓丽的彩虹！"
+                    ]
+                },
+                // 20-29%
+                {
+                    min: 20,
+                    texts: [
+                        "大佬的品味独具匠心，小的甘拜下风！",
+                        "大佬这眼光，简直就是一道独特的风景！",
+                        "大佬的鉴赏能力已经到达了返朴归真的境界！",
+                        "大佬这审美，怕是得到了仙人的指点吧！"
+                    ]
+                },
+                // 10-19%
+                {
+                    min: 10,
+                    texts: [
+                        "大佬的品味超凡脱俗，小的五体投地！",
+                        "大佬这眼光，简直就是一道特立独行的风景！",
+                        "大佬的鉴赏水平已经到达了物我两忘的境界！",
+                        "大佬这审美，简直就是一股清新的春风！"
+                    ]
+                },
+                // 0-9%
+                {
+                    min: 0,
+                    texts: [
+                        "大佬的品味高深莫测，小的自愧弗如！",
+                        "大佬这眼光，简直就是一道与众不同的风景！",
+                        "大佬的鉴赏能力已经到达了无我无物的境界！",
+                        "大佬这审美，怕是得到了外星人的指点吧！"
+                    ]
+                }
+            ];
+
+            // 找到对应区间的评价
+            const evaluation = evaluations.find(e => funnyRate >= e.min);
+            // 从对应区间随机选择一条评价
+            return evaluation.texts[Math.floor(Math.random() * evaluation.texts.length)];
         }
     </script>
 </body>

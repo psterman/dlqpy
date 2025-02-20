@@ -1195,7 +1195,6 @@
                             // 添加键盘滚动支持
                             const handleKeyScroll = (e) => {
                                 if (!card.classList.contains('scrollable')) return;
-
                                 const scrollAmount = 100;
                                 
                                 if (e.key === 'ArrowUp') {
@@ -1213,9 +1212,31 @@
                                 }
                             };
 
-                            document.addEventListener('keydown', handleKeyScroll);
-                            
-                            // 触摸事件处理
+                            // 添加鼠标滚轮事件处理
+                            const handleWheel = (e) => {
+                                if (!card.classList.contains('scrollable')) return;
+                                
+                                // 阻止事件冒泡，防止触发页面滚动
+                                e.stopPropagation();
+                                
+                                // 检查是否在滚动边界
+                                const isAtTop = card.scrollTop <= 0;
+                                const isAtBottom = card.scrollTop >= card.scrollHeight - card.clientHeight;
+                                
+                                // 在边界时允许事件冒泡
+                                if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+                                    return;
+                                }
+                                
+                                // 否则阻止默认行为，使用自定义滚动
+                                e.preventDefault();
+                                card.scrollBy({
+                                    top: e.deltaY,
+                                    behavior: 'smooth'
+                                });
+                            };
+
+                            // 触摸事件处理（适用于所有设备）
                             let startY = 0;
                             let startX = 0;
                             let isScrolling = null;
@@ -1246,11 +1267,13 @@
                                 }
                                 
                                 if (isScrolling) {
-                                    // 垂直滚动时，只在边界处理左右滑动
+                                    // 垂直滚动
+                                    e.preventDefault();
+                                    card.scrollTop = card.touchStartScrollTop - deltaY;
+                                    
+                                    // 在边界时检查是否需要切换图片
                                     if ((isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
                                         if (Math.abs(deltaX) > 50 && touchDuration < 300) {
-                                            e.preventDefault();
-                                            // 触发图片切换
                                             if (deltaX > 0) {
                                                 currentIndex--;
                                             } else {
@@ -1274,7 +1297,9 @@
                                 isScrolling = null;
                             };
 
-                            // 添加触摸事件监听
+                            // 添加所有事件监听
+                            document.addEventListener('keydown', handleKeyScroll);
+                            card.addEventListener('wheel', handleWheel, { passive: false });
                             card.addEventListener('touchstart', handleTouchStart, { passive: true });
                             card.addEventListener('touchmove', handleTouchMove, { passive: false });
                             card.addEventListener('touchend', handleTouchEnd);
@@ -1282,6 +1307,7 @@
                             // 清理函数
                             const cleanup = () => {
                                 document.removeEventListener('keydown', handleKeyScroll);
+                                card.removeEventListener('wheel', handleWheel);
                                 card.removeEventListener('touchstart', handleTouchStart);
                                 card.removeEventListener('touchmove', handleTouchMove);
                                 card.removeEventListener('touchend', handleTouchEnd);

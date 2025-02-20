@@ -680,6 +680,41 @@
             margin: 0 auto;
             display: block;
         }
+
+        /* 优化触摸设备滚动样式 */
+        .image-card.scrollable {
+            touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            overscroll-behavior-y: contain;
+            height: 100%;
+            padding: 10px;
+            padding-bottom: 60px;
+            position: relative;
+        }
+
+        .image-card.scrollable img {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            margin: 0 auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        /* 确保滚动条始终可见 */
+        .image-card.scrollable::-webkit-scrollbar {
+            width: 6px;
+            background-color: transparent;
+        }
+
+        .image-card.scrollable::-webkit-scrollbar-thumb {
+            background-color: var(--text-color);
+            border-radius: 4px;
+            opacity: 0.5;
+        }
     </style>
 </head>
 
@@ -1157,80 +1192,103 @@
                             // 添加滚动提示
                             showScrollHint();
                             
-                            // 移动端触摸处理
-                            if (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches) {
-                                let startY = 0;
-                                let startX = 0;
-                                let lastTouchTime = 0;
-                                let isScrolling = null;
-                                let touchStartTime = 0;
+                            // 添加键盘滚动支持
+                            const handleKeyScroll = (e) => {
+                                if (!card.classList.contains('scrollable')) return;
+
+                                const scrollAmount = 100;
                                 
-                                card.addEventListener('touchstart', (e) => {
-                                    startY = e.touches[0].clientY;
-                                    startX = e.touches[0].pageX;
-                                    touchStartTime = Date.now();
-                                    isScrolling = null;
-                                    
-                                    // 记录触摸开始时的滚动位置
-                                    card.touchStartScrollTop = card.scrollTop;
-                                }, { passive: true });
+                                if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    card.scrollBy({
+                                        top: -scrollAmount,
+                                        behavior: 'smooth'
+                                    });
+                                } else if (e.key === 'ArrowDown') {
+                                    e.preventDefault();
+                                    card.scrollBy({
+                                        top: scrollAmount,
+                                        behavior: 'smooth'
+                                    });
+                                }
+                            };
+
+                            document.addEventListener('keydown', handleKeyScroll);
+                            
+                            // 触摸事件处理
+                            let startY = 0;
+                            let startX = 0;
+                            let isScrolling = null;
+                            let touchStartTime = 0;
+                            
+                            const handleTouchStart = (e) => {
+                                startY = e.touches[0].clientY;
+                                startX = e.touches[0].pageX;
+                                touchStartTime = Date.now();
+                                isScrolling = null;
+                                card.touchStartScrollTop = card.scrollTop;
+                            };
+                            
+                            const handleTouchMove = (e) => {
+                                if (!startY || !startX) return;
                                 
-                                card.addEventListener('touchmove', (e) => {
-                                    if (!startY || !startX) return;
-                                    
-                                    const deltaY = e.touches[0].clientY - startY;
-                                    const deltaX = e.touches[0].pageX - startX;
-                                    const touchDuration = Date.now() - touchStartTime;
-                                    
-                                    // 检查是否在滚动边界
-                                    const isAtTop = card.scrollTop <= 0;
-                                    const isAtBottom = card.scrollTop >= card.scrollHeight - card.clientHeight - 1;
-                                    
-                                    // 判断滑动方向
-                                    if (isScrolling === null) {
-                                        isScrolling = Math.abs(deltaY) > Math.abs(deltaX);
-                                    }
-                                    
-                                    if (isScrolling) {
-                                        // 垂直滚动
-                                        if ((isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
-                                            // 在边界处且继续往对应方向滑动时，允许切换图片
-                                            if (Math.abs(deltaX) > 50 && touchDuration < 300) {
-                                                e.preventDefault();
-                                                isScrolling = false;
-                                                
-                                                // 触发图片切换
-                                                if (deltaX > 0) {
-                                                    currentIndex--;
-                                                } else {
-                                                    currentIndex++;
-                                                }
-                                                showImage(currentIndex);
-                                                checkAndResetImages();
-                                            }
-                                        }
-                                    } else {
-                                        // 水平滑动
-                                        if (Math.abs(deltaX) > 50) {
+                                const deltaY = e.touches[0].clientY - startY;
+                                const deltaX = e.touches[0].pageX - startX;
+                                const touchDuration = Date.now() - touchStartTime;
+                                
+                                // 检查是否在滚动边界
+                                const isAtTop = card.scrollTop <= 0;
+                                const isAtBottom = card.scrollTop >= card.scrollHeight - card.clientHeight - 1;
+                                
+                                // 判断滑动方向
+                                if (isScrolling === null) {
+                                    isScrolling = Math.abs(deltaY) > Math.abs(deltaX);
+                                }
+                                
+                                if (isScrolling) {
+                                    // 垂直滚动时，只在边界处理左右滑动
+                                    if ((isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
+                                        if (Math.abs(deltaX) > 50 && touchDuration < 300) {
                                             e.preventDefault();
+                                            // 触发图片切换
+                                            if (deltaX > 0) {
+                                                currentIndex--;
+                                            } else {
+                                                currentIndex++;
+                                            }
+                                            showImage(currentIndex);
+                                            checkAndResetImages();
                                         }
                                     }
-                                }, { passive: false });
-                                
-                                card.addEventListener('touchend', (e) => {
-                                    const deltaTime = Date.now() - touchStartTime;
-                                    const deltaScroll = Math.abs(card.scrollTop - card.touchStartScrollTop);
-                                    
-                                    // 如果滚动距离很小且时间很短，可能是想切换图片
-                                    if (deltaScroll < 10 && deltaTime < 300) {
-                                        isScrolling = false;
+                                } else {
+                                    // 水平滑动
+                                    if (Math.abs(deltaX) > 50) {
+                                        e.preventDefault();
                                     }
-                                    
-                                    startY = null;
-                                    startX = null;
-                                    isScrolling = null;
-                                });
-                            }
+                                }
+                            };
+                            
+                            const handleTouchEnd = () => {
+                                startY = null;
+                                startX = null;
+                                isScrolling = null;
+                            };
+
+                            // 添加触摸事件监听
+                            card.addEventListener('touchstart', handleTouchStart, { passive: true });
+                            card.addEventListener('touchmove', handleTouchMove, { passive: false });
+                            card.addEventListener('touchend', handleTouchEnd);
+
+                            // 清理函数
+                            const cleanup = () => {
+                                document.removeEventListener('keydown', handleKeyScroll);
+                                card.removeEventListener('touchstart', handleTouchStart);
+                                card.removeEventListener('touchmove', handleTouchMove);
+                                card.removeEventListener('touchend', handleTouchEnd);
+                            };
+
+                            // 在图片切换时清理事件监听
+                            card.cleanup = cleanup;
                         } else if (aspectRatio < 0.7) {
                             // 宽图片
                             img.style.width = 'auto';

@@ -1,0 +1,15 @@
+{
+    "images": [
+        {
+            "filename": "image1.jpg",
+            "width": 800,
+            "height": 1200
+        },
+        {
+            "filename": "image2.jpg",
+            "width": 1200,
+            "height": 800
+        }
+        // ... 更多图片
+    ]
+} 

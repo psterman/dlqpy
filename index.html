@@ -8,7 +8,7 @@
     <style>
         :root {
             --bg-color: #f5f7fa;
-            --card-bg: #fff;
+            --card-bg: #f5f7fa;
             --text-color: #666;
             --shadow-color: rgba(0, 0, 0, 0.1);
             --counter-bg: rgba(255, 255, 255, 0.9);
@@ -16,7 +16,7 @@
 
         [data-theme="dark"] {
             --bg-color: #1a1a1a;
-            --card-bg: #2d2d2d;
+            --card-bg: #1a1a1a;
             --text-color: #e0e0e0;
             --shadow-color: rgba(0, 0, 0, 0.3);
             --counter-bg: rgba(45, 45, 45, 0.9);
@@ -92,7 +92,7 @@
         }
 
         .image-card {
-            background-color: var(--card-bg);
+            background-color: transparent;
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
@@ -122,8 +122,9 @@
         /* PC端样式 */
         @media (min-width: 769px) {
             .image-card {
+                background-color: transparent;
                 border-radius: 12px;
-                box-shadow: 0 4px 20px var(--shadow-color);
+                box-shadow: none;
             }
 
             .image-card.scrollable {
@@ -169,6 +170,7 @@
             }
 
             .image-card {
+                background-color: transparent;
                 padding: 10px;
                 max-width: 100%;
                 height: 100%;
@@ -179,23 +181,40 @@
 
             /* 长图滚动样式 */
             .image-card.scrollable {
-                overflow-y: scroll;
-                overflow-x: hidden;
+                background-color: transparent;
+                display: block !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
                 -webkit-overflow-scrolling: touch;
                 scroll-behavior: smooth;
-                padding-bottom: 60px;
                 height: 100%;
-                display: block;
+                padding: 10px;
+                padding-bottom: 60px;
                 touch-action: pan-y;
+                position: relative;
             }
 
             .image-card.scrollable img {
                 width: 100%;
                 height: auto;
-                max-height: none;
-                object-fit: contain;
+                max-width: 100%;
                 margin: 0 auto;
                 display: block;
+            }
+
+            /* 确保滚动容器正确工作 */
+            .image-container {
+                height: calc(100vh - 80px);
+                overflow: hidden;
+                padding: 0;
+                margin: 0;
+                width: 100%;
+            }
+
+            /* 优化触摸滚动 */
+            .image-card.scrollable {
+                overscroll-behavior-y: contain;
+                -webkit-overflow-scrolling: touch;
             }
 
             /* 滚动条样式 */
@@ -208,19 +227,6 @@
                 background-color: var(--text-color);
                 border-radius: 4px;
                 opacity: 0.5;
-            }
-
-            /* 确保内容可以滚动 */
-            .image-card.scrollable {
-                overscroll-behavior-y: contain;
-                position: relative;
-                z-index: 1;
-            }
-
-            /* 优化触摸体验 */
-            .image-card.scrollable {
-                touch-action: pan-y pinch-zoom;
-                -webkit-overflow-scrolling: touch;
             }
 
             /* 修改滚动进度指示器样式 */
@@ -616,9 +622,9 @@
             }
 
             .image-card {
-                background-color: var(--card-bg);
+                background-color: transparent;
                 border-radius: 12px;
-                box-shadow: 0 4px 20px var(--shadow-color);
+                box-shadow: none;
                 padding: 20px;
                 height: 100%;
                 width: 100%;
@@ -1133,89 +1139,63 @@
                         if (aspectRatio > 1.5) {
                             // 长图片
                             card.classList.add('scrollable');
-
-                            // 基础样式设置（适用于所有设备）
+                            
+                            // 基础样式设置
+                            card.style.display = 'block';  // 改为块级显示
                             card.style.overflowY = 'auto';
                             card.style.overflowX = 'hidden';
                             card.style.height = '100%';
-                            card.style.alignItems = 'flex-start';
-                            card.style.webkitOverflowScrolling = 'touch'; // 平滑滚动
-
+                            card.style.touchAction = 'pan-y';  // 允许垂直滚动
+                            
                             // 设置图片样式
                             img.style.width = '100%';
                             img.style.height = 'auto';
                             img.style.maxWidth = `${cardWidth}px`;
                             img.style.margin = '0 auto';
                             img.style.display = 'block';
-
+                            
                             // 添加滚动提示
                             showScrollHint();
-
-                            // 仅在移动设备上添加触摸事件处理
+                            
+                            // 移动端触摸处理
                             if (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches) {
-                                let touchStartY = 0;
-                                let touchStartX = 0;
-                                let isSwiping = false;
-                                let isScrolling = false;
+                                let startY = 0;
+                                let startX = 0;
+                                let isScrolling = null;
 
                                 card.addEventListener('touchstart', (e) => {
-                                    touchStartY = e.touches[0].clientY;
-                                    touchStartX = e.touches[0].pageX;
-                                    isSwiping = false;
-                                    isScrolling = false;
+                                    startY = e.touches[0].clientY;
+                                    startX = e.touches[0].pageX;
+                                    isScrolling = null;
                                 }, { passive: true });
 
                                 card.addEventListener('touchmove', (e) => {
-                                    if (e.touches.length !== 1) return;
+                                    if (!startY || !startX) return;
 
-                                    const touchY = e.touches[0].clientY;
-                                    const touchX = e.touches[0].pageX;
-                                    const deltaY = touchStartY - touchY;
-                                    const deltaX = touchStartX - touchX;
+                                    const deltaY = e.touches[0].clientY - startY;
+                                    const deltaX = e.touches[0].pageX - startX;
 
-                                    // 判断滑动方向
-                                    if (!isSwiping && !isScrolling) {
-                                        if (Math.abs(deltaY) > Math.abs(deltaX)) {
-                                            isScrolling = true;
-                                        } else if (Math.abs(deltaX) > 10) { // 添加一个阈值
-                                            isSwiping = true;
-                                        }
+                                    // 确定滚动方向
+                                    if (isScrolling === null) {
+                                        isScrolling = Math.abs(deltaY) > Math.abs(deltaX);
                                     }
 
                                     if (isScrolling) {
-                                        // 检查是否在边界
-                                        const isAtTop = card.scrollTop <= 0;
-                                        const isAtBottom = card.scrollTop >= card.scrollHeight - card.clientHeight;
-
-                                        // 在边界时允许左右滑动
-                                        if ((isAtTop && deltaY < 0) || (isAtBottom && deltaY > 0)) {
-                                            e.preventDefault();
-                                        }
-                                    } else if (isSwiping) {
+                                        // 垂直滚动时不阻止默认行为
+                                        e.stopPropagation();
+                                    } else {
+                                        // 水平滑动时阻止默认行为
                                         e.preventDefault();
+                                        e.stopPropagation();
                                     }
                                 }, { passive: false });
 
-                                // 添加滚动结束检测
                                 card.addEventListener('touchend', () => {
-                                    isSwiping = false;
-                                    isScrolling = false;
+                                    startY = null;
+                                    startX = null;
+                                    isScrolling = null;
                                 });
                             }
-
-                            // 添加鼠标滚轮事件处理
-                            card.addEventListener('wheel', (e) => {
-                                const isAtTop = card.scrollTop <= 0;
-                                const isAtBottom = card.scrollTop >= card.scrollHeight - card.clientHeight;
-
-                                // 在到达顶部或底部时，允许事件冒泡（以支持触控板的手势）
-                                if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
-                                    return;
-                                }
-
-                                // 否则阻止事件冒泡，专注于滚动
-                                e.stopPropagation();
-                            }, { passive: true });
                         } else if (aspectRatio < 0.7) {
                             // 宽图片
                             img.style.width = 'auto';

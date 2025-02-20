@@ -1141,11 +1141,11 @@
                             card.classList.add('scrollable');
                             
                             // 基础样式设置
-                            card.style.display = 'block';  // 改为块级显示
+                            card.style.display = 'block';
                             card.style.overflowY = 'auto';
                             card.style.overflowX = 'hidden';
                             card.style.height = '100%';
-                            card.style.touchAction = 'pan-y';  // 允许垂直滚动
+                            card.style.touchAction = 'pan-y';
                             
                             // 设置图片样式
                             img.style.width = '100%';
@@ -1161,36 +1161,71 @@
                             if (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches) {
                                 let startY = 0;
                                 let startX = 0;
+                                let lastTouchTime = 0;
                                 let isScrolling = null;
-
+                                let touchStartTime = 0;
+                                
                                 card.addEventListener('touchstart', (e) => {
                                     startY = e.touches[0].clientY;
                                     startX = e.touches[0].pageX;
+                                    touchStartTime = Date.now();
                                     isScrolling = null;
+                                    
+                                    // 记录触摸开始时的滚动位置
+                                    card.touchStartScrollTop = card.scrollTop;
                                 }, { passive: true });
-
+                                
                                 card.addEventListener('touchmove', (e) => {
                                     if (!startY || !startX) return;
-
+                                    
                                     const deltaY = e.touches[0].clientY - startY;
                                     const deltaX = e.touches[0].pageX - startX;
-
-                                    // 确定滚动方向
+                                    const touchDuration = Date.now() - touchStartTime;
+                                    
+                                    // 检查是否在滚动边界
+                                    const isAtTop = card.scrollTop <= 0;
+                                    const isAtBottom = card.scrollTop >= card.scrollHeight - card.clientHeight - 1;
+                                    
+                                    // 判断滑动方向
                                     if (isScrolling === null) {
                                         isScrolling = Math.abs(deltaY) > Math.abs(deltaX);
                                     }
-
+                                    
                                     if (isScrolling) {
-                                        // 垂直滚动时不阻止默认行为
-                                        e.stopPropagation();
+                                        // 垂直滚动
+                                        if ((isAtTop && deltaY > 0) || (isAtBottom && deltaY < 0)) {
+                                            // 在边界处且继续往对应方向滑动时，允许切换图片
+                                            if (Math.abs(deltaX) > 50 && touchDuration < 300) {
+                                                e.preventDefault();
+                                                isScrolling = false;
+                                                
+                                                // 触发图片切换
+                                                if (deltaX > 0) {
+                                                    currentIndex--;
+                                                } else {
+                                                    currentIndex++;
+                                                }
+                                                showImage(currentIndex);
+                                                checkAndResetImages();
+                                            }
+                                        }
                                     } else {
-                                        // 水平滑动时阻止默认行为
-                                        e.preventDefault();
-                                        e.stopPropagation();
+                                        // 水平滑动
+                                        if (Math.abs(deltaX) > 50) {
+                                            e.preventDefault();
+                                        }
                                     }
                                 }, { passive: false });
-
-                                card.addEventListener('touchend', () => {
+                                
+                                card.addEventListener('touchend', (e) => {
+                                    const deltaTime = Date.now() - touchStartTime;
+                                    const deltaScroll = Math.abs(card.scrollTop - card.touchStartScrollTop);
+                                    
+                                    // 如果滚动距离很小且时间很短，可能是想切换图片
+                                    if (deltaScroll < 10 && deltaTime < 300) {
+                                        isScrolling = false;
+                                    }
+                                    
                                     startY = null;
                                     startX = null;
                                     isScrolling = null;
@@ -2031,6 +2066,31 @@
                 setTimeout(() => hint.remove(), 500);
             }, 3000);
         }
+
+        // 添加键盘事件处理
+        document.addEventListener('keydown', (e) => {
+            const card = document.querySelector('.image-card');
+            if (!card || !card.classList.contains('scrollable')) return;
+
+            const scrollAmount = 100; // 每次滚动的像素量
+            
+            switch (e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    card.scrollBy({
+                        top: -scrollAmount,
+                        behavior: 'smooth'
+                    });
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    card.scrollBy({
+                        top: scrollAmount,
+                        behavior: 'smooth'
+                    });
+                    break;
+            }
+        });
     </script>
 </body>
 

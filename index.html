@@ -197,9 +197,17 @@
 
         /* 添加滚动提示动画 */
         @keyframes scrollHint {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(10px); }
-            100% { transform: translateY(0); }
+            0% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(10px);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
         }
 
         .scroll-indicator {
@@ -930,18 +938,18 @@
                 img.loading = 'eager';
 
                 const cachedImg = preloadedImages.get(currentImage.url);
-                
+
                 // 创建临时图片来获取原始尺寸
                 const tempImg = new Image();
                 tempImg.src = cachedImg.src;
-                
+
                 tempImg.onload = () => {
                     const imgNaturalWidth = tempImg.naturalWidth;
                     const imgNaturalHeight = tempImg.naturalHeight;
                     const viewportHeight = window.innerHeight - (window.innerWidth <= 768 ? 80 : 100);
                     const viewportWidth = window.innerWidth;
-                    const cardWidth = window.innerWidth <= 768 ? 
-                        viewportWidth - 20 : 
+                    const cardWidth = window.innerWidth <= 768 ?
+                        viewportWidth - 20 :
                         Math.min(800, viewportWidth - 40);
                     const aspectRatio = imgNaturalHeight / imgNaturalWidth;
 
@@ -954,7 +962,7 @@
                     card.style.display = 'flex';
                     card.style.alignItems = 'center';
                     card.style.justifyContent = 'center';
-                    
+
                     // 移除之前可能添加的类
                     card.classList.remove('scrollable');
 
@@ -975,7 +983,7 @@
                             img.style.height = 'auto';
                             img.style.maxWidth = `${cardWidth}px`;
                             showScrollHint();
-                            
+
                             // 添加滚动事件监听
                             if (window.innerWidth <= 768) {
                                 card.addEventListener('touchstart', handleScrollStart);
@@ -1000,7 +1008,7 @@
                     img.style.display = 'block';
                     img.style.margin = '0 auto';
                     img.style.objectFit = 'contain';
-                    
+
                     img.src = cachedImg.src;
                 };
 
@@ -1039,11 +1047,11 @@
                     // 左箭头：不喜欢
                     // 先更新按钮状态
                     updateButtonsOnSwipe(-window.innerWidth * 0.2);
-                    
+
                     // 添加动画效果
                     card.style.transition = 'transform 0.2s ease-out';
                     card.style.transform = 'translateX(-100%)';
-                    
+
                     setTimeout(() => {
                         currentIndex++;
                         showImage(currentIndex);
@@ -1057,11 +1065,11 @@
                     // 右箭头：喜欢
                     // 先更新按钮状态
                     updateButtonsOnSwipe(window.innerWidth * 0.2);
-                    
+
                     // 添加动画效果
                     card.style.transition = 'transform 0.2s ease-out';
                     card.style.transform = 'translateX(100%)';
-                    
+
                     setTimeout(() => {
                         currentIndex++;
                         funnyCount++;
@@ -1593,7 +1601,7 @@
         function updateButtonsOnSwipe(diff, duration = 200) {
             const leftButton = document.querySelector('.left-button');
             const rightButton = document.querySelector('.right-button');
-            
+
             if (!leftButton || !rightButton) return;
 
             const threshold = window.innerWidth * 0.1;
@@ -1602,7 +1610,7 @@
                 leftButton.innerHTML = '❎';
                 leftButton.style.transform = 'scale(1.2)';
                 rightButton.style.opacity = '0.5';
-                
+
                 // 添加过渡动画
                 leftButton.style.transition = `all ${duration}ms ease`;
                 rightButton.style.transition = `all ${duration}ms ease`;
@@ -1610,7 +1618,7 @@
                 rightButton.innerHTML = '❤️';
                 rightButton.style.transform = 'scale(1.2)';
                 leftButton.style.opacity = '0.5';
-                
+
                 // 添加过渡动画
                 leftButton.style.transition = `all ${duration}ms ease`;
                 rightButton.style.transition = `all ${duration}ms ease`;
@@ -1620,7 +1628,7 @@
                 rightButton.style.transform = '';
                 leftButton.style.opacity = '';
                 rightButton.style.opacity = '';
-                
+
                 // 如果当前是图标状态，则恢复为原始文案
                 if (leftButton.innerHTML === '❎') {
                     leftButton.innerHTML = leftButton.getAttribute('data-text') || `👈 ${getRandomText(false)}`;
@@ -1628,7 +1636,7 @@
                 if (rightButton.innerHTML === '❤️') {
                     rightButton.innerHTML = rightButton.getAttribute('data-text') || `${getRandomText(true)} 👉`;
                 }
-                
+
                 // 添加过渡动画
                 leftButton.style.transition = `all ${duration}ms ease`;
                 rightButton.style.transition = `all ${duration}ms ease`;
@@ -1760,14 +1768,14 @@
             const card = e.currentTarget;
             const currentY = e.touches[0].clientY;
             const deltaY = currentY - startY;
-            
+
             // 如果在顶部或底部，并且试图继续滚动，则允许左右滑动
-            if (isAtEdge && 
-                ((card.scrollTop === 0 && deltaY > 0) || 
-                 (card.scrollTop >= card.scrollHeight - card.clientHeight && deltaY < 0))) {
+            if (isAtEdge &&
+                ((card.scrollTop === 0 && deltaY > 0) ||
+                    (card.scrollTop >= card.scrollHeight - card.clientHeight && deltaY < 0))) {
                 return;
             }
-            
+
             // 否则阻止默认行为，允许垂直滚动
             e.stopPropagation();
         }

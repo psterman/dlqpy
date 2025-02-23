@@ -74,10 +74,11 @@ def download_image(url, filename, downloaded_images):
     return False
 
 def is_valid_date(post_time):
-    target_date = datetime(2025, 2, 18, 9, 0)
+    start_date = datetime(2025, 2, 20, 18, 0)  # 开始时间
+    end_date = datetime(2025, 2, 23, 8, 0)  # 结束时间
     try:
         post_datetime = datetime.strptime(post_time, '%Y-%m-%d %H:%M:%S')
-        return post_datetime > target_date
+        return start_date <= post_datetime <= end_date  # 检查是否在范围内
     except:
         return False
 

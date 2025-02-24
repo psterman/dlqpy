@@ -1099,20 +1099,29 @@
                 <div class="image-card">
                     <img src="${image.url}" alt="Image ${currentIndex + 1}" onload="handleImageLoad(this)">
                 </div>
-                <div class="swipe-zone"></div>
             `;
 
             updateSwipeHint();
 
-            // 为热区绑定事件
-            const swipeZone = container.querySelector('.swipe-zone');
-            swipeZone.addEventListener('touchstart', handleStart);
-            swipeZone.addEventListener('touchmove', handleMove);
-            swipeZone.addEventListener('touchend', handleEnd);
-            swipeZone.addEventListener('mousedown', handleMouseStart);
-            swipeZone.addEventListener('mousemove', handleMouseMove);
-            swipeZone.addEventListener('mouseup', handleMouseEnd);
-            swipeZone.addEventListener('mouseleave', handleMouseEnd);
+            // 等待图片加载完成后再决定是否添加热区
+            const img = container.querySelector('img');
+            img.onload = () => {
+                const card = container.querySelector('.image-card');
+                // 只在非长图模式下添加热区
+                if (!card.classList.contains('scrollable')) {
+                    container.innerHTML += '<div class="swipe-zone"></div>';
+                    const swipeZone = container.querySelector('.swipe-zone');
+                    if (swipeZone) {
+                        swipeZone.addEventListener('touchstart', handleStart);
+                        swipeZone.addEventListener('touchmove', handleMove);
+                        swipeZone.addEventListener('touchend', handleEnd);
+                        swipeZone.addEventListener('mousedown', handleMouseStart);
+                        swipeZone.addEventListener('mousemove', handleMouseMove);
+                        swipeZone.addEventListener('mouseup', handleMouseEnd);
+                        swipeZone.addEventListener('mouseleave', handleMouseEnd);
+                    }
+                }
+            };
         }
 
         // 添加图片加载完成后的处理函数
@@ -1230,25 +1239,13 @@
         document.body.addEventListener('mouseleave', handleMouseEnd);
 
         function handleStart(e) {
-            // 检查是否点击在长图上
-            const card = document.querySelector('.image-card');
-            if (card && card.classList.contains('scrollable')) {
-                // 如果是长图，只在图片顶部区域启用左右滑动
-                const touchY = e.touches ? e.touches[0].clientY : e.clientY;
-                const cardRect = card.getBoundingClientRect();
-                const topZone = cardRect.top + 100; // 顶部100px区域
-
-                if (touchY > topZone) {
-                    // 如果不在顶部区域，不处理左右滑动
-                    return;
-                }
-            }
-
-            const currentTime = Date.now();
+            // 记录初始触摸点
             startX = e.touches ? e.touches[0].clientX : e.clientX;
+            startY = e.touches ? e.touches[0].clientY : e.clientY;
             currentX = startX;
             startTime = Date.now();
             isMoving = true;
+            isScrolling = false;  // 重置滚动状态
         }
 
         function handleMouseStart(e) {
@@ -1266,31 +1263,37 @@
         function handleMove(e) {
             if (!isMoving) return;
 
+            const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+            currentX = e.touches ? e.touches[0].clientX : e.clientX;
+            
+            // 计算水平和垂直移动距离
+            const diffX = currentX - startX;
+            const diffY = Math.abs(currentY - startY);
+
             const card = document.querySelector('.image-card');
             if (card && card.classList.contains('scrollable')) {
-                // 如果是长图，检查是否在顶部区域
-                const touchY = e.touches ? e.touches[0].clientY : e.clientY;
-                const cardRect = card.getBoundingClientRect();
-                const topZone = cardRect.top + 100;
-
-                if (touchY > topZone) {
-                    // 如果不在顶部区域，停止处理滑动
-                    isMoving = false;
+                // 如果垂直移动大于水平移动，则认为是在滚动
+                if (diffY > Math.abs(diffX)) {
+                    isScrolling = true;
                     return;
                 }
-            }
-
-            e.preventDefault();
-            currentX = e.touches ? e.touches[0].clientX : e.clientX;
-            const diff = currentX - startX;
-
-            // 更新按钮状态
-            updateButtonsOnSwipe(diff);
-
-            if (card) {
+                
+                // 如果是水平滑动，阻止滚动
+                if (Math.abs(diffX) > 10 && !isScrolling) {
+                    e.preventDefault();
+                    requestAnimationFrame(() => {
+                        card.style.transform = `translateX(${diffX}px)`;
+                    });
+                    // 更新按钮状态
+                    updateButtonsOnSwipe(diffX);
+                }
+            } else {
+                // 非长图模式，正常处理滑动
+                e.preventDefault();
                 requestAnimationFrame(() => {
-                    card.style.transform = `translateX(${diff}px)`;
+                    card.style.transform = `translateX(${diffX}px)`;
                 });
+                updateButtonsOnSwipe(diffX);
             }
         }
 
@@ -1325,39 +1328,37 @@
             const diff = currentX - startX;
             const threshold = window.innerWidth * 0.2;
             const timeElapsed = Date.now() - startTime;
-            const velocity = Math.abs(diff) / Math.max(timeElapsed, 1);
+            const velocity = Math.abs(diff) / timeElapsed;
 
+            const card = document.querySelector('.image-card');
+            if (!card) return;
+
+            // 如果是在滚动，不处理滑动切换
+            if (isScrolling) {
+                isScrolling = false;
+                card.style.transform = '';
+                return;
+            }
+
+            // 处理滑动切换
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
-                if (diff > 0) {  // 右滑表示喜欢
+                card.style.transition = 'transform 0.2s ease-out';
+                card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
+                
+                setTimeout(() => {
                     currentIndex++;
-                    funnyCount++;
-                } else {  // 左滑表示不喜欢
-                    currentIndex++;
-                }
-
-                // 添加动画效果
-                const card = document.querySelector('.image-card');
-                if (card) {
-                    card.style.transition = 'transform 0.2s ease-out';
-                    card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
-                    setTimeout(() => {
-                        showImage(currentIndex);
-                        checkAndResetImages();
-                        // 重新加载按钮文案
-                        updateSwipeHint();
-                    }, 200);
-                }
+                    if (diff > 0) funnyCount++;
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                    updateSwipeHint();
+                }, 200);
             } else {
-                // 恢复原位的动画
-                const card = document.querySelector('.image-card');
-                if (card) {
-                    card.style.transition = 'transform 0.2s ease-out';
-                    card.style.transform = 'translateX(0)';
-                    setTimeout(() => {
-                        card.style.transition = '';
-                    }, 200);
-                }
-                // 恢复按钮状态
+                // 恢复原位
+                card.style.transition = 'transform 0.2s ease-out';
+                card.style.transform = '';
+                setTimeout(() => {
+                    card.style.transition = '';
+                }, 200);
                 updateButtonsOnSwipe(0);
             }
         }

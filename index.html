@@ -151,41 +151,51 @@
                 position: fixed !important;
                 top: 0 !important;
                 left: 0;
+                width: 100%;
+                height: 100vh !important;
+                margin: 0;
+                padding: 0 !important;  /* 移除padding */
+                box-sizing: border-box;
                 display: flex !important;
                 flex-direction: column !important;
-                justify-content: center !important;
-                align-items: center !important;
-                height: 100vh !important;
-                width: 100%;
-                margin: 0;
-                padding: 60px 0;
-                /* 保持与全局样式一致 */
-                box-sizing: border-box;
+                justify-content: flex-start !important;  /* 改为从顶部开始布局 */
                 overflow: hidden;
             }
 
             .image-card {
                 background-color: transparent;
                 width: 100%;
-                padding: 10px;
-                padding-bottom: 80px;
+                padding: 60px 10px 80px 10px;  /* 上下padding移到这里 */
+                margin-top: 20vh;  /* 从顶部留出20%的空间 */
                 position: relative;
                 overflow: hidden;
                 box-sizing: border-box;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                /* 确保图片居中 */
-                height: calc(100vh - 120px);
-                /* 减去padding的高度 */
             }
 
             .image-card img {
                 max-width: min(100%, 100vw - 40px);
-                max-height: calc(100vh - 160px);
+                max-height: calc(60vh - 140px);  /* 调整最大高度 */
                 width: auto;
                 height: auto;
                 object-fit: contain;
+            }
+
+            /* 长图滚动样式 */
+            .image-card.scrollable {
+                height: calc(80vh - 140px);  /* 长图时的高度 */
+                overflow-y: auto !important;
+                align-items: flex-start;
+                margin-top: 60px;  /* 长图时调整上边距 */
+            }
+
+            .image-card.scrollable img {
+                width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
+                margin: 0 auto;
             }
         }
 
@@ -653,6 +663,31 @@
                 margin: 0 auto;
             }
         }
+
+        /* 修改热区样式 */
+        .swipe-zone {
+            position: fixed;
+            top: 0;  /* 从顶部开始 */
+            left: 50%;
+            transform: translateX(-50%);  /* 只需要水平居中 */
+            width: 90%;  /* 宽度占屏幕90% */
+            height: 100vh;  /* 高度占满整个视口 */
+            z-index: 1000;
+            touch-action: pan-x;  /* 只允许水平滑动 */
+            background: transparent;  /* 确保完全透明 */
+        }
+
+        /* 移除热区的边框提示样式 */
+        .swipe-zone::after {
+            display: none;  /* 移除边框提示 */
+        }
+
+        /* 移动端样式不需要特别设置，因为已经是自适应的了 */
+        @media (max-width: 768px) {
+            .swipe-zone {
+                width: 100%;  /* 在移动端可以占满宽度 */
+            }
+        }
     </style>
 </head>
 
@@ -1070,9 +1105,20 @@
                 <div class="image-card">
                     <img src="${image.url}" alt="Image ${currentIndex + 1}" onload="handleImageLoad(this)">
                 </div>
+                <div class="swipe-zone"></div>
             `;
 
             updateSwipeHint();
+
+            // 为热区绑定事件
+            const swipeZone = container.querySelector('.swipe-zone');
+            swipeZone.addEventListener('touchstart', handleStart);
+            swipeZone.addEventListener('touchmove', handleMove);
+            swipeZone.addEventListener('touchend', handleEnd);
+            swipeZone.addEventListener('mousedown', handleMouseStart);
+            swipeZone.addEventListener('mousemove', handleMouseMove);
+            swipeZone.addEventListener('mouseup', handleMouseEnd);
+            swipeZone.addEventListener('mouseleave', handleMouseEnd);
         }
 
         // 添加图片加载完成后的处理函数

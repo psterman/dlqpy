@@ -85,6 +85,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             margin: 0;
             width: 100%;
             height: calc(100vh - 100px);
@@ -105,8 +106,6 @@
             padding: 10px;
             box-sizing: border-box;
             height: 100%;
-            -webkit-overflow-scrolling: touch;
-            scroll-behavior: smooth;
         }
 
         .image-card img {
@@ -116,7 +115,41 @@
             height: auto;
             object-fit: contain;
             display: block;
-            margin: 0 auto;
+            margin: auto;
+        }
+
+        /* 自定义滚动条样式 */
+        .image-card::-webkit-scrollbar {
+            width: 6px;
+            background-color: transparent;
+        }
+
+        .image-card::-webkit-scrollbar-track {
+            background: transparent;
+            margin: 10px 0;
+        }
+
+        .image-card::-webkit-scrollbar-thumb {
+            background-color: var(--text-color);
+            opacity: 0.3;
+            border-radius: 3px;
+            transition: opacity 0.3s;
+        }
+
+        .image-card:hover::-webkit-scrollbar-thumb {
+            opacity: 0.5;
+        }
+
+        /* 移动端样式优化 */
+        @media (max-width: 768px) {
+            .image-card {
+                padding: 10px;
+                padding-bottom: 60px;
+            }
+
+            .image-card::-webkit-scrollbar {
+                width: 4px;
+            }
         }
 
         /* PC端样式 */
@@ -164,160 +197,57 @@
         /* 修改移动端样式 */
         @media (max-width: 768px) {
             .image-container {
-                height: calc(100vh - 80px);
-                padding: 0;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+                margin: 0;
+                padding: 60px 0;  /* 为顶部和底部按钮留出空间 */
+                box-sizing: border-box;
+                /* 使用 grid 布局 */
+                display: grid;
+                place-items: center;  /* 完美居中 */
                 overflow: hidden;
             }
 
             .image-card {
                 background-color: transparent;
+                width: 100%;
+                /* 使用 grid 布局 */
+                display: grid;
+                place-items: center;
                 padding: 10px;
-                max-width: 100%;
-                height: 100%;
                 position: relative;
                 overflow: hidden;
                 box-sizing: border-box;
+                /* 设置最大高度确保不会超出容器 */
+                max-height: calc(100vh - 120px);
             }
 
-            /* 长图滚动样式 */
+            .image-card img {
+                /* 移除固定高度限制 */
+                max-width: min(100%, 100vw - 40px);  /* 考虑边距 */
+                max-height: min(100%, calc(100vh - 140px));  /* 考虑按钮和边距 */
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                /* grid 布局下不需要 margin */
+            }
+
+            /* 长图模式样式 */
             .image-card.scrollable {
-                background-color: transparent;
-                display: block !important;
+                display: block;  /* 改回块级布局 */
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
-                -webkit-overflow-scrolling: touch;
-                scroll-behavior: smooth;
-                height: 100%;
-                padding: 10px;
                 padding-bottom: 60px;
-                touch-action: pan-y;
-                position: relative;
             }
 
             .image-card.scrollable img {
-                width: 100%;
-                height: auto;
-                max-width: 100%;
+                width: 100% !important;
+                height: auto !important;
+                max-height: none !important;
                 margin: 0 auto;
-                display: block;
-            }
-
-            /* 确保滚动容器正确工作 */
-            .image-container {
-                height: calc(100vh - 80px);
-                overflow: hidden;
-                padding: 0;
-                margin: 0;
-                width: 100%;
-            }
-
-            /* 优化触摸滚动 */
-            .image-card.scrollable {
-                overscroll-behavior-y: contain;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            /* 滚动条样式 */
-            .image-card.scrollable::-webkit-scrollbar {
-                width: 4px;
-                background-color: transparent;
-            }
-
-            .image-card.scrollable::-webkit-scrollbar-thumb {
-                background-color: var(--text-color);
-                border-radius: 4px;
-                opacity: 0.5;
-            }
-
-            /* 修改滚动进度指示器样式 */
-            .scroll-progress {
-                position: fixed;
-                right: 4px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 3px;
-                height: 100px;
-                background-color: rgba(var(--text-color-rgb), 0.1);
-                border-radius: 2px;
-                pointer-events: none;
-                overflow: hidden;
-            }
-
-            .scroll-progress-bar {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 0%;
-                background-color: var(--text-color);
-                border-radius: 2px;
-                transition: height 0.1s ease;
-            }
-
-            /* 滚动提示样式 */
-            .scroll-hint {
-                position: fixed;
-                top: 50%;
-                right: 10px;
-                transform: translateY(-50%);
-                background-color: var(--counter-bg);
-                color: var(--text-color);
-                padding: 8px;
-                border-radius: 20px;
-                font-size: 20px;
-                opacity: 0.8;
-                z-index: 1000;
-                pointer-events: none;
-                animation: fadeInOut 3s ease-in-out forwards;
-                box-shadow: 0 2px 6px var(--shadow-color);
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
-            }
-
-            @keyframes fadeInOut {
-                0% {
-                    opacity: 0;
-                    transform: translate(20px, -50%);
-                }
-
-                20% {
-                    opacity: 0.8;
-                    transform: translateY(-50%);
-                }
-
-                80% {
-                    opacity: 0.8;
-                    transform: translateY(-50%);
-                }
-
-                100% {
-                    opacity: 0;
-                    transform: translate(20px, -50%);
-                }
-            }
-
-            /* 添加滚动进度指示器 */
-            .scroll-progress {
-                position: fixed;
-                right: 4px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 3px;
-                height: 100px;
-                background-color: var(--text-color);
-                opacity: 0.2;
-                border-radius: 2px;
-                pointer-events: none;
-            }
-
-            .scroll-progress::after {
-                content: '';
-                position: absolute;
-                width: 100%;
-                background-color: var(--text-color);
-                border-radius: 2px;
-                opacity: 0.8;
-                transition: all 0.3s ease;
             }
         }
 
@@ -715,6 +645,34 @@
             border-radius: 4px;
             opacity: 0.5;
         }
+
+        /* 长图滚动模式样式 */
+        .image-card.scrollable {
+            align-items: flex-start;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+        }
+
+        .image-card.scrollable img {
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            margin: 0 auto;
+        }
+
+        /* 优化移动端长图显示 */
+        @media (max-width: 768px) {
+            .image-card.scrollable {
+                padding-bottom: 80px;
+                /* 为底部按钮留出更多空间 */
+            }
+
+            .image-card.scrollable img {
+                width: 100%;
+                height: auto;
+                margin: 0 auto;
+            }
+        }
     </style>
 </head>
 
@@ -1060,13 +1018,34 @@
             const container = document.getElementById('image-container');
             container.innerHTML = `
                 <div class="image-card">
-                    <img src="${image.url}" alt="Image ${currentIndex + 1}">
+                    <img src="${image.url}" alt="Image ${currentIndex + 1}" onload="handleImageLoad(this)">
                 </div>
             `;
 
-            // 更新其他UI元素
             updateSwipeHint();
-            // ... 其他UI更新代码 ...
+        }
+
+        // 添加图片加载完成后的处理函数
+        function handleImageLoad(img) {
+            const card = img.parentElement;
+            const containerWidth = card.clientWidth;
+            const containerHeight = card.clientHeight;
+
+            // 计算图片的原始宽高比
+            const imageRatio = img.naturalHeight / img.naturalWidth;
+
+            // 如果图片高度超过容器高度的1.2倍，认为是长图
+            if (imageRatio > 1.2) {
+                // 设置图片宽度为容器宽度
+                img.style.width = '100%';
+                img.style.height = 'auto';
+                card.classList.add('scrollable');
+            } else {
+                // 普通图片保持原有布局
+                img.style.maxHeight = '100%';
+                img.style.width = 'auto';
+                card.classList.remove('scrollable');
+            }
         }
 
         // 添加计数器更新函数

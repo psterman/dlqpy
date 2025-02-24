@@ -80,15 +80,20 @@
             border: 1px solid var(--text-color);
         }
 
-        /* 修改图片容器样式 */
+        /* 修改全局图片容器样式 */
         .image-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            /* 添加垂直居中 */
             margin: 0;
             width: 100%;
-            height: calc(100vh - 100px);
+            height: 100vh;
+            /* 改为100vh */
+            padding: 60px 0;
+            /* 为顶部和底部按钮留出空间 */
+            box-sizing: border-box;
             overflow: hidden;
         }
 
@@ -140,15 +145,47 @@
             opacity: 0.5;
         }
 
-        /* 移动端样式优化 */
+        /* 修改移动端样式 */
         @media (max-width: 768px) {
-            .image-card {
-                padding: 10px;
-                padding-bottom: 60px;
+            .image-container {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                align-items: center !important;
+                height: 100vh !important;
+                width: 100%;
+                margin: 0;
+                padding: 60px 0;
+                /* 保持与全局样式一致 */
+                box-sizing: border-box;
+                overflow: hidden;
             }
 
-            .image-card::-webkit-scrollbar {
-                width: 4px;
+            .image-card {
+                background-color: transparent;
+                width: 100%;
+                padding: 10px;
+                padding-bottom: 80px;
+                position: relative;
+                overflow: hidden;
+                box-sizing: border-box;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                /* 确保图片居中 */
+                height: calc(100vh - 120px);
+                /* 减去padding的高度 */
+            }
+
+            .image-card img {
+                max-width: min(100%, 100vw - 40px);
+                max-height: calc(100vh - 160px);
+                width: auto;
+                height: auto;
+                object-fit: contain;
             }
         }
 
@@ -191,63 +228,6 @@
 
             .image-card:hover::-webkit-scrollbar-thumb {
                 opacity: 0.5;
-            }
-        }
-
-        /* 修改移动端样式 */
-        @media (max-width: 768px) {
-            .image-container {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100vh;
-                margin: 0;
-                padding: 60px 0;  /* 为顶部和底部按钮留出空间 */
-                box-sizing: border-box;
-                /* 使用 grid 布局 */
-                display: grid;
-                place-items: center;  /* 完美居中 */
-                overflow: hidden;
-            }
-
-            .image-card {
-                background-color: transparent;
-                width: 100%;
-                /* 使用 grid 布局 */
-                display: grid;
-                place-items: center;
-                padding: 10px;
-                position: relative;
-                overflow: hidden;
-                box-sizing: border-box;
-                /* 设置最大高度确保不会超出容器 */
-                max-height: calc(100vh - 120px);
-            }
-
-            .image-card img {
-                /* 移除固定高度限制 */
-                max-width: min(100%, 100vw - 40px);  /* 考虑边距 */
-                max-height: min(100%, calc(100vh - 140px));  /* 考虑按钮和边距 */
-                width: auto;
-                height: auto;
-                object-fit: contain;
-                /* grid 布局下不需要 margin */
-            }
-
-            /* 长图模式样式 */
-            .image-card.scrollable {
-                display: block;  /* 改回块级布局 */
-                overflow-y: auto !important;
-                overflow-x: hidden !important;
-                padding-bottom: 60px;
-            }
-
-            .image-card.scrollable img {
-                width: 100% !important;
-                height: auto !important;
-                max-height: none !important;
-                margin: 0 auto;
             }
         }
 
@@ -721,58 +701,115 @@
         let tapCount = 0;
         let longPressTimer;
 
-        // 加载时的舔狗文案
+        // 修改加载时的臣子文案
         const loadingTexts = [
-            "奴才正在为皇上准备奏折...",
-            "小的正在整理御览资料...",
-            "奴才斗胆为陛下筛选...",
-            "恳请圣上稍候片刻...",
-            "奴才正在诚惶诚恐地准备...",
-            "容奴才为陛下精选...",
-            "奴才正在战战兢兢地整理...",
-            "请容奴才为圣上过目...",
-            "奴才正在为万岁爷准备...",
-            "小的不敢怠慢，马上呈上...",
-            "奴才正在用心准备...",
-            "恳请陛下稍作休息...",
-            "奴才正在为圣上效劳...",
-            "容奴才为陛下筛选精品...",
-            "小的正在竭尽全力准备...",
-            "奴才正在为皇上精心挑选...",
-            "请容奴才再做细选...",
-            "万岁爷请稍候，马上呈上...",
-            "奴才正在为陛下忙碌...",
-            "小的不敢懈怠，即刻呈递...",
-            "恳请圣上稍作歇息...",
-            "奴才正在为陛下效命...",
-            "容小的为皇上准备...",
-            "奴才正在为万岁爷甄选...",
-            "请容奴才为圣上整理...",
-            "小的正在为陛下忙活...",
-            "奴才正在为皇上筛选...",
-            "恳请万岁爷稍等片刻...",
-            "奴才正在为圣上准备...",
-            "容小的为陛下效劳...",
-            "奴才正在为皇上整理...",
-            "请容奴才为万岁爷准备...",
-            "小的正在为圣上筛选...",
-            "奴才正在为陛下甄选...",
-            "恳请皇上稍作休息...",
-            "奴才正在为圣上忙碌...",
-            "容小的为万岁爷效劳...",
-            "奴才正在为陛下准备...",
-            "请容奴才为皇上整理...",
-            "小的正在为圣上效命...",
-            "奴才正在为万岁爷筛选...",
-            "恳请陛下稍候片刻...",
-            "奴才正在为皇上甄选...",
-            "容小的为圣上效劳...",
-            "奴才正在为陛下整理...",
-            "请容奴才为万岁爷准备...",
-            "小的正在为圣上筛选...",
-            "奴才正在为皇上效命...",
-            "恳请万岁爷稍等片刻...",
-            "奴才正在为陛下忙活..."
+            "臣正在为陛下整理奏折...",
+            "恳请万岁爷稍候片刻...",
+            "臣正在为圣上筛选精品...",
+            "请容臣为陛下准备...",
+            "臣正在为皇上过目...",
+            "容臣为万岁爷整理...",
+            "臣正在为陛下效劳...",
+            "恭请圣上稍作休息...",
+            "臣正在为皇上忙碌...",
+            "请容臣为陛下斟酌...",
+            "臣正在为万岁爷甄选...",
+            "恳请陛下稍待...",
+            "臣正在为圣上用心准备...",
+            "容臣为皇上细细挑选...",
+            "臣正在为陛下尽心筛选...",
+            "请容臣为万岁爷仔细准备...",
+            "臣正在为圣上诚惶诚恐地整理...",
+            "恭请陛下稍事休息...",
+            "臣正在为皇上战战兢兢地准备...",
+            "容臣为陛下精心挑选...",
+            "臣正在为万岁爷恭敬地整理...",
+            "请容臣为圣上细心准备...",
+            "臣正在为皇上虔诚地筛选...",
+            "恳请陛下稍作歇息...",
+            "臣正在为圣上兢兢业业地整理...",
+            "容臣为万岁爷认真准备...",
+            "臣正在为陛下谨慎地挑选...",
+            "请容臣为皇上专注地整理...",
+            "臣正在为圣上一丝不苟地准备...",
+            "恭请万岁爷稍候...",
+            "臣正在为陛下全神贯注地筛选...",
+            "容臣为圣上用心准备...",
+            "臣正在为皇上殚精竭虑地整理...",
+            "请容臣为万岁爷细致准备...",
+            "臣正在为陛下夙夜匪懈地筛选...",
+            "恳请圣上稍事休憩...",
+            "臣正在为皇上废寝忘食地准备...",
+            "容臣为陛下勤勉地整理...",
+            "臣正在为万岁爷孜孜不倦地筛选...",
+            "请容臣为圣上专心准备...",
+            "臣正在为皇上尽心竭力地整理...",
+            "恭请陛下稍作休息...",
+            "臣正在为圣上精益求精地准备...",
+            "容臣为万岁爷悉心挑选...",
+            "臣正在为陛下不敢懈怠地整理...",
+            "请容臣为皇上慎重准备...",
+            "臣正在为圣上恪尽职守地筛选...",
+            "恳请万岁爷稍事休息...",
+            "臣正在为陛下夜以继日地准备...",
+            "容臣为圣上细心整理...",
+            "臣正在为皇上如履薄冰地筛选...",
+            "请容臣为万岁爷认真准备...",
+            "臣正在为陛下小心翼翼地整理...",
+            "恭请圣上稍候片刻...",
+            "臣正在为皇上战战兢兢地筛选...",
+            "容臣为陛下诚心准备...",
+            "臣正在为万岁爷兢兢业业地整理...",
+            "请容臣为圣上仔细准备...",
+            "臣正在为皇上如临深渊地筛选...",
+            "恳请陛下稍作休憩...",
+            "臣正在为圣上如履薄冰地准备...",
+            "容臣为万岁爷谨慎整理...",
+            "臣正在为陛下不敢怠慢地筛选...",
+            "请容臣为皇上用心准备...",
+            "臣正在为圣上夙夜在公地整理...",
+            "恭请万岁爷稍事休息...",
+            "臣正在为陛下勤勤恳恳地准备...",
+            "容臣为圣上虔诚整理...",
+            "臣正在为皇上恭敬地筛选...",
+            "请容臣为万岁爷细致准备...",
+            "臣正在为陛下尽职尽责地整理...",
+            "恳请圣上稍候...",
+            "臣正在为皇上专心致志地准备...",
+            "容臣为陛下谨慎筛选...",
+            "臣正在为万岁爷勤恳地整理...",
+            "请容臣为圣上认真准备...",
+            "臣正在为皇上一丝不苟地筛选...",
+            "恭请陛下稍事休息...",
+            "臣正在为圣上殚精竭虑地准备...",
+            "容臣为万岁爷细心整理...",
+            "臣正在为陛下慎重地筛选...",
+            "请容臣为皇上恭敬准备...",
+            "臣正在为圣上夜以继日地整理...",
+            "恳请万岁爷稍候片刻...",
+            "臣正在为陛下精心准备...",
+            "容臣为圣上仔细筛选...",
+            "臣正在为皇上用心整理...",
+            "请容臣为万岁爷虔诚准备...",
+            "臣正在为陛下谨慎地整理...",
+            "恭请圣上稍作休憩...",
+            "臣正在为皇上细致地准备...",
+            "容臣为陛下专心筛选...",
+            "臣正在为万岁爷认真地整理...",
+            "请容臣为圣上勤恳准备...",
+            "臣正在为皇上一丝不苟地筛选...",
+            "恳请陛下稍候...",
+            "臣正在为圣上专注地准备...",
+            "容臣为万岁爷谨慎整理...",
+            "臣正在为陛下恭敬地筛选...",
+            "请容臣为皇上细心准备...",
+            "臣正在为圣上勤勉地整理...",
+            "恭请万岁爷稍事休息...",
+            "臣正在为陛下虔诚地准备...",
+            "容臣为圣上用心筛选...",
+            "臣正在为皇上仔细地整理...",
+            "请容臣为万岁爷认真准备...",
+            "臣正在为陛下细致地筛选..."
         ];
 
         // 左滑文案
@@ -982,8 +1019,21 @@
         }
 
         async function loadImages() {
+            // 添加首次加载提示
+            const container = document.getElementById('image-container');
+            container.innerHTML = `
+                <div class="loading-overlay">
+                    <div class="loading-text">${loadingTexts[Math.floor(Math.random() * loadingTexts.length)]}</div>
+                </div>
+            `;
+
             if (!imageIndex && !(await loadImageIndex())) {
                 console.error('无法加载图片索引');
+                container.innerHTML = `
+                    <div class="error-message">
+                        奴才有罪，加载失败了 (╥﹏╥)
+                    </div>
+                `;
                 return;
             }
 
@@ -1128,15 +1178,16 @@
             }
         }
 
-        imageContainer.addEventListener('touchstart', handleStart);
-        imageContainer.addEventListener('touchmove', handleMove);
-        imageContainer.addEventListener('touchend', handleEnd);
+        // 修改事件监听器的绑定
+        document.body.addEventListener('touchstart', handleStart);
+        document.body.addEventListener('touchmove', handleMove);
+        document.body.addEventListener('touchend', handleEnd);
 
         // 添加鼠标事件监听
-        imageContainer.addEventListener('mousedown', handleMouseStart);
-        imageContainer.addEventListener('mousemove', handleMouseMove);
-        imageContainer.addEventListener('mouseup', handleMouseEnd);
-        imageContainer.addEventListener('mouseleave', handleMouseEnd);
+        document.body.addEventListener('mousedown', handleMouseStart);
+        document.body.addEventListener('mousemove', handleMouseMove);
+        document.body.addEventListener('mouseup', handleMouseEnd);
+        document.body.addEventListener('mouseleave', handleMouseEnd);
 
         function handleStart(e) {
             const currentTime = Date.now();
@@ -1160,6 +1211,14 @@
 
         function handleMove(e) {
             if (!isMoving) return;
+
+            // 获取当前滚动的图片卡片
+            const card = document.querySelector('.image-card');
+            if (card && card.classList.contains('scrollable')) {
+                // 如果是长图且正在垂直滚动，不处理左右滑动
+                if (isScrolling) return;
+            }
+
             e.preventDefault();
             currentX = e.touches[0].clientX;
             const diff = currentX - startX;
@@ -1167,7 +1226,6 @@
             // 更新按钮状态
             updateButtonsOnSwipe(diff);
 
-            const card = document.querySelector('.image-card');
             if (card) {
                 requestAnimationFrame(() => {
                     card.style.transform = `translateX(${diff}px)`;
@@ -1177,6 +1235,12 @@
 
         function handleMouseMove(e) {
             if (!isMouseDown) return;
+
+            const card = document.querySelector('.image-card');
+            if (card && card.classList.contains('scrollable')) {
+                if (isScrolling) return;
+            }
+
             e.preventDefault();
             e.stopPropagation();
 
@@ -1186,7 +1250,6 @@
             // 更新按钮状态
             updateButtonsOnSwipe(diff);
 
-            const card = document.querySelector('.image-card');
             if (card) {
                 requestAnimationFrame(() => {
                     card.style.transform = `translateX(${diff}px)`;
@@ -1579,48 +1642,40 @@
             leftSpan.className = 'left-button';
             const leftText = `👈 ${getRandomText(false)}`;
             leftSpan.innerHTML = leftText;
-            leftSpan.setAttribute('data-text', leftText); // 保存初始文案
+            leftSpan.setAttribute('data-text', leftText);
 
             const rightSpan = document.createElement('span');
             rightSpan.className = 'right-button';
             const rightText = `${getRandomText(true)} 👉`;
             rightSpan.innerHTML = rightText;
-            rightSpan.setAttribute('data-text', rightText); // 保存初始文案
+            rightSpan.setAttribute('data-text', rightText);
 
-            // 修改点击事件处理
+            // 修改点击事件处理，使其更直接响应
             leftSpan.addEventListener('click', () => {
-                // 显示❎动画
+                // 显示动画
                 leftSpan.innerHTML = '❎';
-                leftSpan.style.transform = 'translateX(-50%) scale(1.2)';
+                leftSpan.style.transform = 'scale(1.2)';
                 rightSpan.style.opacity = '0.5';
 
-                // 延迟执行切换图片
-                setTimeout(() => {
-                    currentIndex++;
-                    showImage(currentIndex);
-                    checkAndResetImages();
-
-                    // 重新加载按钮文案
-                    updateSwipeHint();
-                }, 300);
+                // 立即切换图片
+                currentIndex++;
+                showImage(currentIndex);
+                checkAndResetImages();
+                updateSwipeHint();
             });
 
             rightSpan.addEventListener('click', () => {
-                // 显示❤️动画
+                // 显示动画
                 rightSpan.innerHTML = '❤️';
-                rightSpan.style.transform = 'translateX(50%) scale(1.2)';
+                rightSpan.style.transform = 'scale(1.2)';
                 leftSpan.style.opacity = '0.5';
 
-                // 延迟执行切换图片
-                setTimeout(() => {
-                    currentIndex++;
-                    funnyCount++;
-                    showImage(currentIndex);
-                    checkAndResetImages();
-
-                    // 重新加载按钮文案
-                    updateSwipeHint();
-                }, 300);
+                // 立即切换图片
+                currentIndex++;
+                funnyCount++;
+                showImage(currentIndex);
+                checkAndResetImages();
+                updateSwipeHint();
             });
 
             hint.appendChild(leftSpan);

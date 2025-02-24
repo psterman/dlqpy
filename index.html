@@ -1124,7 +1124,7 @@
             };
         }
 
-        // 添加图片加载完成后的处理函数
+        // 修改 handleImageLoad 函数
         function handleImageLoad(img) {
             const card = img.parentElement;
             const containerWidth = card.clientWidth;
@@ -1144,6 +1144,22 @@
                 img.style.maxHeight = '100%';
                 img.style.width = 'auto';
                 card.classList.remove('scrollable');
+                
+                // 为普通图片添加热区
+                const container = document.getElementById('image-container');
+                if (!container.querySelector('.swipe-zone')) {
+                    container.innerHTML += '<div class="swipe-zone"></div>';
+                    const swipeZone = container.querySelector('.swipe-zone');
+                    if (swipeZone) {
+                        swipeZone.addEventListener('touchstart', handleStart);
+                        swipeZone.addEventListener('touchmove', handleMove);
+                        swipeZone.addEventListener('touchend', handleEnd);
+                        swipeZone.addEventListener('mousedown', handleMouseStart);
+                        swipeZone.addEventListener('mousemove', handleMouseMove);
+                        swipeZone.addEventListener('mouseup', handleMouseEnd);
+                        swipeZone.addEventListener('mouseleave', handleMouseEnd);
+                    }
+                }
             }
         }
 

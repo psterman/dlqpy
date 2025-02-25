@@ -154,19 +154,23 @@
                 width: 100%;
                 height: 100vh !important;
                 margin: 0;
-                padding: 0 !important;  /* 移除padding */
+                padding: 0 !important;
+                /* 移除padding */
                 box-sizing: border-box;
                 display: flex !important;
                 flex-direction: column !important;
-                justify-content: flex-start !important;  /* 改为从顶部开始布局 */
+                justify-content: flex-start !important;
+                /* 改为从顶部开始布局 */
                 overflow: hidden;
             }
 
             .image-card {
                 background-color: transparent;
                 width: 100%;
-                padding: 60px 10px 80px 10px;  /* 上下padding移到这里 */
-                margin-top: 20vh;  /* 从顶部留出20%的空间 */
+                padding: 60px 10px 80px 10px;
+                /* 上下padding移到这里 */
+                margin-top: 20vh;
+                /* 从顶部留出20%的空间 */
                 position: relative;
                 overflow: hidden;
                 box-sizing: border-box;
@@ -177,7 +181,8 @@
 
             .image-card img {
                 max-width: min(100%, 100vw - 40px);
-                max-height: calc(60vh - 140px);  /* 调整最大高度 */
+                max-height: calc(60vh - 140px);
+                /* 调整最大高度 */
                 width: auto;
                 height: auto;
                 object-fit: contain;
@@ -185,10 +190,12 @@
 
             /* 长图滚动样式 */
             .image-card.scrollable {
-                height: calc(80vh - 140px);  /* 长图时的高度 */
+                height: calc(80vh - 140px);
+                /* 长图时的高度 */
                 overflow-y: auto !important;
                 align-items: flex-start;
-                margin-top: 60px;  /* 长图时调整上边距 */
+                margin-top: 60px;
+                /* 长图时调整上边距 */
             }
 
             .image-card.scrollable img {
@@ -673,14 +680,17 @@
             width: 100%;
             height: 100vh;
             z-index: 1000;
-            touch-action: pan-y;  /* 允许垂直滚动 */
+            touch-action: pan-y;
+            /* 允许垂直滚动 */
             background: transparent;
         }
 
         /* 长图模式下的热区样式 */
-        .image-card.scrollable + .swipe-zone {
-            height: 100px;  /* 长图模式下热区只在顶部 */
-            top: 60px;  /* 考虑顶部按钮的位置 */
+        .image-card.scrollable+.swipe-zone {
+            height: 100px;
+            /* 长图模式下热区只在顶部 */
+            top: 60px;
+            /* 考虑顶部按钮的位置 */
         }
     </style>
 </head>
@@ -1144,7 +1154,7 @@
                 img.style.maxHeight = '100%';
                 img.style.width = 'auto';
                 card.classList.remove('scrollable');
-                
+
                 // 为普通图片添加热区
                 const container = document.getElementById('image-container');
                 if (!container.querySelector('.swipe-zone')) {
@@ -1281,7 +1291,7 @@
 
             const currentY = e.touches ? e.touches[0].clientY : e.clientY;
             currentX = e.touches ? e.touches[0].clientX : e.clientX;
-            
+
             // 计算水平和垂直移动距离
             const diffX = currentX - startX;
             const diffY = Math.abs(currentY - startY);
@@ -1293,7 +1303,7 @@
                     isScrolling = true;
                     return;
                 }
-                
+
                 // 如果是水平滑动，阻止滚动
                 if (Math.abs(diffX) > 10 && !isScrolling) {
                     e.preventDefault();
@@ -1360,7 +1370,7 @@
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
                 card.style.transition = 'transform 0.2s ease-out';
                 card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
-                
+
                 setTimeout(() => {
                     currentIndex++;
                     if (diff > 0) funnyCount++;

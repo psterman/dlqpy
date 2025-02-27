@@ -160,6 +160,16 @@ def clean_duplicate_files():
     except Exception as e:
         print(f"清理文件时出错: {e}")
 
+def get_page_suffix(current_page):
+    """获取页面后缀，处理特殊的递减逻辑"""
+    if current_page >= 214:
+        # 218->4, 217->3, 216->2, 215->1, 214->0
+        return str(current_page - 214)  # 这样218-214=4, 217-214=3, 以此类推
+    else:
+        # 当页码小于214时，使用字母
+        # 213->z, 212->y, 211->x 等
+        return chr(ord('z') - (213 - current_page))
+
 def main():
     # 先清理重复文件并更新index.html
     clean_duplicate_files()
@@ -171,10 +181,12 @@ def main():
     try:
         while current_page >= end_page:
             try:
+                # 获取页面后缀
+                page_suffix = get_page_suffix(current_page)
                 # 修改URL格式以匹配实际页面
-                url = f'https://jandan.net/pic/MjAyNTAyMjctMjE{current_page}#comments'
+                url = f'https://jandan.net/pic/MjAyNTAyMjctMjE{page_suffix}#comments'
                 print(f"\n正在处理页面: {url}")
-                print(f"当前页码: {current_page}")
+                print(f"当前页码: {current_page} (后缀: {page_suffix})")
                 
                 response = requests.get(url, headers=get_random_headers())
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -204,7 +216,7 @@ def main():
                         time.sleep(random.uniform(0.5, 1))  # 下载间隔0.5-1秒
                 
                 print(f"完成页面 {current_page}")
-                current_page -= 1
+                current_page -= 1  # 页码递减
                 time.sleep(random.uniform(1, 2))  # 页面间隔1-2秒
                 
             except Exception as e:

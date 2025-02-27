@@ -9,8 +9,8 @@ import json
 import base64
 
 # 创建保存目录和下载记录文件
-if not os.path.exists('pic2'):
-    os.makedirs('pic2')
+if not os.path.exists('pic4'):
+    os.makedirs('pic4')
 
 # 随机User-Agent列表
 user_agents = [
@@ -51,7 +51,7 @@ def download_image(url, filename):
         # 下载符合条件的图片
         response = requests.get(url, headers=get_random_headers(), timeout=10)
         if response.status_code == 200:
-            with open(os.path.join('pic2', filename), 'wb') as f:
+            with open(os.path.join('pic4', filename), 'wb') as f:
                 f.write(response.content)
             print(f'成功下载: {filename} ({file_size/1024:.1f}KB)')
             return True
@@ -164,15 +164,15 @@ def main():
     # 先清理重复文件并更新index.html
     clean_duplicate_files()
     
-    # 从215页开始，一直到21页
-    current_page = 215  # 从最新页面开始
-    end_page = 21  # 结束页码
+    # 从218页开始，一直到200页
+    current_page = 218  # 从最新页面开始
+    end_page = 200  # 结束页码
     
     try:
         while current_page >= end_page:
             try:
                 # 修改URL格式以匹配实际页面
-                url = f'https://jandan.net/pic/MjAyNTAyMjUtMjE{current_page}'
+                url = f'https://jandan.net/pic/MjAyNTAyMjctMjE{current_page}#comments'
                 print(f"\n正在处理页面: {url}")
                 print(f"当前页码: {current_page}")
                 

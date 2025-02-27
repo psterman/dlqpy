@@ -170,12 +170,47 @@ def get_page_suffix(current_page):
         # 213->z, 212->y, 211->x 等
         return chr(ord('z') - (213 - current_page))
 
+def analyze_page_pattern(url):
+    """分析页面导航，识别页码规律"""
+    try:
+        response = requests.get(url, headers=get_random_headers())
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 获取页面导航链接
+        nav_links = []
+        for link in soup.find_all('a', href=True):
+            if '/pic/' in link['href']:
+                nav_links.append(link['href'])
+        
+        # 提取页码和对应的URL尾数
+        page_patterns = {}
+        for link in nav_links:
+            # 从URL中提取尾数
+            match = re.search(r'MjAyNTAyMjctMjE([0-9a-z])#comments', link)
+            if match:
+                suffix = match.group(1)
+                # 从链接文本中提取页码
+                page_num = None
+                link_text = link.get_text().strip()
+                if link_text.isdigit():
+                    page_num = int(link_text)
+                    page_patterns[page_num] = suffix
+        
+        print("发现的页码规律：")
+        for page, suffix in sorted(page_patterns.items(), reverse=True):
+            print(f"页码 {page} -> 尾数 {suffix}")
+            
+        return page_patterns
+    except Exception as e:
+        print(f"分析页面规律时出错: {e}")
+    return None
+
 def main():
     # 先清理重复文件并更新index.html
     clean_duplicate_files()
     
-    # 从218页开始，一直到200页
-    current_page = 218  # 从最新页面开始
+    # 从208页开始，一直到200页
+    current_page = 208  # 从208页开始
     end_page = 200  # 结束页码
     
     try:

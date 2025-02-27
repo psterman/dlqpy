@@ -124,25 +124,25 @@
         }
 
         /* 自定义滚动条样式 */
-        .image-card::-webkit-scrollbar {
-            width: 6px;
-            background-color: transparent;
-        }
+            .image-card::-webkit-scrollbar {
+                width: 6px;
+                background-color: transparent;
+            }
 
-        .image-card::-webkit-scrollbar-track {
-            background: transparent;
-            margin: 10px 0;
-        }
+            .image-card::-webkit-scrollbar-track {
+                background: transparent;
+                margin: 10px 0;
+            }
 
-        .image-card::-webkit-scrollbar-thumb {
-            background-color: var(--text-color);
-            opacity: 0.3;
-            border-radius: 3px;
-            transition: opacity 0.3s;
-        }
+            .image-card::-webkit-scrollbar-thumb {
+                background-color: var(--text-color);
+                opacity: 0.3;
+                border-radius: 3px;
+                transition: opacity 0.3s;
+            }
 
-        .image-card:hover::-webkit-scrollbar-thumb {
-            opacity: 0.5;
+            .image-card:hover::-webkit-scrollbar-thumb {
+                opacity: 0.5;
         }
 
         /* 修改移动端样式 */
@@ -1307,7 +1307,7 @@
                 // 如果是水平滑动，阻止滚动
                 if (Math.abs(diffX) > 10 && !isScrolling) {
                     e.preventDefault();
-                    requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
                         card.style.transform = `translateX(${diffX}px)`;
                     });
                     // 更新按钮状态
@@ -1368,23 +1368,23 @@
 
             // 处理滑动切换
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
-                card.style.transition = 'transform 0.2s ease-out';
-                card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
+                    card.style.transition = 'transform 0.2s ease-out';
+                    card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
 
-                setTimeout(() => {
+                    setTimeout(() => {
                     currentIndex++;
                     if (diff > 0) funnyCount++;
-                    showImage(currentIndex);
-                    checkAndResetImages();
-                    updateSwipeHint();
-                }, 200);
+                        showImage(currentIndex);
+                        checkAndResetImages();
+                        updateSwipeHint();
+                    }, 200);
             } else {
                 // 恢复原位
-                card.style.transition = 'transform 0.2s ease-out';
+                    card.style.transition = 'transform 0.2s ease-out';
                 card.style.transform = '';
-                setTimeout(() => {
-                    card.style.transition = '';
-                }, 200);
+                    setTimeout(() => {
+                        card.style.transition = '';
+                    }, 200);
                 updateButtonsOnSwipe(0);
             }
         }
@@ -1746,10 +1746,10 @@
                 rightSpan.style.opacity = '0.5';
 
                 // 立即切换图片
-                currentIndex++;
-                showImage(currentIndex);
-                checkAndResetImages();
-                updateSwipeHint();
+                    currentIndex++;
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                    updateSwipeHint();
             });
 
             rightSpan.addEventListener('click', () => {
@@ -1759,11 +1759,11 @@
                 leftSpan.style.opacity = '0.5';
 
                 // 立即切换图片
-                currentIndex++;
-                funnyCount++;
-                showImage(currentIndex);
-                checkAndResetImages();
-                updateSwipeHint();
+                    currentIndex++;
+                    funnyCount++;
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                    updateSwipeHint();
             });
 
             hint.appendChild(leftSpan);

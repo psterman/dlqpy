@@ -161,14 +161,12 @@ def clean_duplicate_files():
         print(f"清理文件时出错: {e}")
 
 def get_page_suffix(current_page):
-    """获取页面后缀，处理特殊的递减逻辑"""
-    if current_page >= 214:
-        # 218->4, 217->3, 216->2, 215->1, 214->0
-        return str(current_page - 214)  # 这样218-214=4, 217-214=3, 以此类推
-    else:
-        # 当页码小于214时，使用字母
-        # 213->z, 212->y, 211->x 等
-        return chr(ord('z') - (213 - current_page))
+    """获取页面后缀，使用base64编码"""
+    # 构造页码字符串
+    page_str = str(current_page)
+    # 对页码进行base64编码
+    encoded = base64.b64encode(page_str.encode()).decode()
+    return encoded
 
 def analyze_page_pattern(url):
     """分析页面导航，识别页码规律"""
@@ -209,9 +207,9 @@ def main():
     # 先清理重复文件并更新index.html
     clean_duplicate_files()
     
-    # 从208页开始，一直到200页
-    current_page = 208  # 从208页开始
-    end_page = 200  # 结束页码
+    # 从200页开始，一直到180页
+    current_page = 200  # 从200页开始
+    end_page = 180  # 结束页码
     
     try:
         while current_page >= end_page:
@@ -219,7 +217,7 @@ def main():
                 # 获取页面后缀
                 page_suffix = get_page_suffix(current_page)
                 # 修改URL格式以匹配实际页面
-                url = f'https://jandan.net/pic/MjAyNTAyMjctMjE{page_suffix}#comments'
+                url = f'https://jandan.net/pic/MjAyNTAyMjct{page_suffix}#comments'
                 print(f"\n正在处理页面: {url}")
                 print(f"当前页码: {current_page} (后缀: {page_suffix})")
                 

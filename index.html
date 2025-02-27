@@ -124,25 +124,25 @@
         }
 
         /* 自定义滚动条样式 */
-            .image-card::-webkit-scrollbar {
-                width: 6px;
-                background-color: transparent;
-            }
+        .image-card::-webkit-scrollbar {
+            width: 6px;
+            background-color: transparent;
+        }
 
-            .image-card::-webkit-scrollbar-track {
-                background: transparent;
-                margin: 10px 0;
-            }
+        .image-card::-webkit-scrollbar-track {
+            background: transparent;
+            margin: 10px 0;
+        }
 
-            .image-card::-webkit-scrollbar-thumb {
-                background-color: var(--text-color);
-                opacity: 0.3;
-                border-radius: 3px;
-                transition: opacity 0.3s;
-            }
+        .image-card::-webkit-scrollbar-thumb {
+            background-color: var(--text-color);
+            opacity: 0.3;
+            border-radius: 3px;
+            transition: opacity 0.3s;
+        }
 
-            .image-card:hover::-webkit-scrollbar-thumb {
-                opacity: 0.5;
+        .image-card:hover::-webkit-scrollbar-thumb {
+            opacity: 0.5;
         }
 
         /* 修改移动端样式 */
@@ -691,6 +691,54 @@
             /* 长图模式下热区只在顶部 */
             top: 60px;
             /* 考虑顶部按钮的位置 */
+        }
+
+        /* 修改移动端按钮样式 */
+        @media (max-width: 768px) {
+            .swipe-hint {
+                bottom: 30px !important;
+                padding: 0 15px;
+                gap: 15px;
+            }
+
+            .swipe-hint span {
+                min-width: 130px;
+                padding: 15px 25px;
+                font-size: 16px;
+                /* 增大字体 */
+                border-radius: 25px;
+                /* 增大圆角 */
+                flex: 1;
+                /* 让按钮平均分配空间 */
+                max-width: calc(50% - 10px);
+                /* 设置最大宽度，保持间距 */
+                height: 50px;
+                /* 固定高度 */
+                line-height: 20px;
+                /* 文字垂直居中 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 15px var(--shadow-color);
+                /* 增强阴影效果 */
+            }
+
+            /* 增大按钮的可点击区域 */
+            .swipe-hint span::before {
+                content: '';
+                position: absolute;
+                top: -10px;
+                bottom: -10px;
+                left: -10px;
+                right: -10px;
+            }
+
+            /* 优化按钮点击反馈 */
+            .swipe-hint span:active {
+                transform: scale(0.95);
+                /* 更明显的按压效果 */
+                background-color: var(--counter-bg);
+            }
         }
     </style>
 </head>
@@ -1307,7 +1355,7 @@
                 // 如果是水平滑动，阻止滚动
                 if (Math.abs(diffX) > 10 && !isScrolling) {
                     e.preventDefault();
-                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
                         card.style.transform = `translateX(${diffX}px)`;
                     });
                     // 更新按钮状态
@@ -1368,23 +1416,23 @@
 
             // 处理滑动切换
             if (Math.abs(diff) > threshold * 0.3 || (Math.abs(diff) > 20 && velocity > 0.2)) {
-                    card.style.transition = 'transform 0.2s ease-out';
-                    card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
+                card.style.transition = 'transform 0.2s ease-out';
+                card.style.transform = `translateX(${diff > 0 ? '100%' : '-100%'})`;
 
-                    setTimeout(() => {
+                setTimeout(() => {
                     currentIndex++;
                     if (diff > 0) funnyCount++;
-                        showImage(currentIndex);
-                        checkAndResetImages();
-                        updateSwipeHint();
-                    }, 200);
+                    showImage(currentIndex);
+                    checkAndResetImages();
+                    updateSwipeHint();
+                }, 200);
             } else {
                 // 恢复原位
-                    card.style.transition = 'transform 0.2s ease-out';
+                card.style.transition = 'transform 0.2s ease-out';
                 card.style.transform = '';
-                    setTimeout(() => {
-                        card.style.transition = '';
-                    }, 200);
+                setTimeout(() => {
+                    card.style.transition = '';
+                }, 200);
                 updateButtonsOnSwipe(0);
             }
         }
@@ -1738,18 +1786,27 @@
             rightSpan.innerHTML = rightText;
             rightSpan.setAttribute('data-text', rightText);
 
-            // 修改点击事件处理，使其更直接响应
+            // 修改点击事件处理，添加动画特效
             leftSpan.addEventListener('click', () => {
                 // 显示动画
                 leftSpan.innerHTML = '❎';
                 leftSpan.style.transform = 'scale(1.2)';
                 rightSpan.style.opacity = '0.5';
 
-                // 立即切换图片
+                // 添加图片滑出动画
+                const card = document.querySelector('.image-card');
+                if (card) {
+                    card.style.transition = 'transform 0.3s ease-out';
+                    card.style.transform = 'translateX(-100%)';
+                }
+
+                // 延迟切换图片，等待动画完成
+                setTimeout(() => {
                     currentIndex++;
                     showImage(currentIndex);
                     checkAndResetImages();
                     updateSwipeHint();
+                }, 300);
             });
 
             rightSpan.addEventListener('click', () => {
@@ -1758,18 +1815,62 @@
                 rightSpan.style.transform = 'scale(1.2)';
                 leftSpan.style.opacity = '0.5';
 
-                // 立即切换图片
+                // 添加图片滑出动画
+                const card = document.querySelector('.image-card');
+                if (card) {
+                    card.style.transition = 'transform 0.3s ease-out';
+                    card.style.transform = 'translateX(100%)';
+                }
+
+                // 延迟切换图片，等待动画完成
+                setTimeout(() => {
                     currentIndex++;
                     funnyCount++;
                     showImage(currentIndex);
                     checkAndResetImages();
                     updateSwipeHint();
+                }, 300);
             });
 
             hint.appendChild(leftSpan);
             hint.appendChild(rightSpan);
             document.body.appendChild(hint);
         }
+
+        // 添加按钮的触摸反馈样式
+        const touchStyle = document.createElement('style');
+        touchStyle.textContent = `
+            @media (max-width: 768px) {
+                .swipe-hint span {
+                    transition: all 0.3s ease;
+                }
+
+                .swipe-hint span:active {
+                    transform: scale(0.95);
+                }
+
+                .swipe-hint .left-button.active {
+                    transform: scale(1.2);
+                    background-color: var(--counter-bg);
+                }
+
+                .swipe-hint .right-button.active {
+                    transform: scale(1.2);
+                    background-color: var(--counter-bg);
+                }
+
+                .swipe-hint span.clicked {
+                    animation: buttonPop 0.3s ease;
+                }
+            }
+
+            @keyframes buttonPop {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(touchStyle);
 
         // 修改 updateButtonsOnSwipe 函数，添加动画持续时间参数
         function updateButtonsOnSwipe(diff, duration = 200) {

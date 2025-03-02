@@ -1105,6 +1105,63 @@
             return url;
         }
 
+        // 修改 CDN 配置和 GitHub API 相关代码
+        const GITHUB_API = {
+            owner: 'psterman',
+            repo: 'jiandan',
+            branch: 'main'
+        };
+
+       
+
+        // 添加获取最新图片的函数
+        async function fetchLatestImages() {
+            try {
+                const allImages = [];
+
+                // 从两个仓库获取图片
+                for (const repo of GITHUB_REPOS) {
+                    try {
+                        // 获取仓库内容
+                        const response = await fetch(`https://api.github.com/repos/${repo.owner}/${repo.repo}/contents?ref=${repo.branch}`);
+                        const data = await response.json();
+
+                        // 获取所有图片文件夹
+                        const imageFolders = data
+                            .filter(item => item.type === 'dir' && (item.name.startsWith('pic') || /^\d+/.test(item.name)))
+                            .sort((a, b) => b.name.localeCompare(a.name));
+
+                        // 获取最新的3个文件夹的内容
+                        const recentFolders = imageFolders.slice(0, 3);
+
+                        for (const folder of recentFolders) {
+                            const folderResponse = await fetch(`https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/${folder.name}?ref=${repo.branch}`);
+                            const folderData = await folderResponse.json();
+
+                            const images = folderData
+                                .filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file.name))
+                                .map(file => ({
+                                    url: `${folder.name}/${file.name}`,
+                                    folder: folder.name,
+                                    timestamp: new Date(file.commit?.committer?.date || Date.now()).getTime(),
+                                    repo: repo.repo // 添加仓库标识
+                                }));
+
+                            allImages.push(...images);
+                        }
+                    } catch (error) {
+                        console.error(`获取 ${repo.repo} 仓库图片失败:`, error);
+                    }
+                }
+
+                return allImages;
+            } catch (error) {
+                console.error('获取图片失败:', error);
+                return [];
+            }
+        }
+
+        // 修改加载图片的函数
         async function loadImages() {
             // 添加首次加载提示
             const container = document.getElementById('image-container');
@@ -1114,72 +1171,83 @@
                 </div>
             `;
 
-            if (!imageIndex && !(await loadImageIndex())) {
-                console.error('无法加载图片索引');
+            try {
+                // 优先从本地缓存加载
+                const cachedImages = localStorage.getItem('cached_images');
+                let images = cachedImages ? JSON.parse(cachedImages) : [];
+
+                // 获取最新图片
+                const latestImages = await fetchLatestImages();
+
+                if (latestImages.length > 0) {
+                    // 合并新旧图片，去重
+                    const allImages = [...latestImages, ...images];
+                    images = Array.from(new Set(allImages.map(img => JSON.stringify(img))))
+                        .map(str => JSON.parse(str))
+                        .sort((a, b) => b.timestamp - a.timestamp);
+
+                    // 缓存到本地
+                    localStorage.setItem('cached_images', JSON.stringify(images));
+                }
+
+                // 随机打乱图片顺序
+                images = _.shuffle(images);
+
+                // 显示第一张图片
+                if (images.length > 0) {
+                    showImage(0);
+                } else {
+                    container.innerHTML = `
+                        <div class="error-message">
+                            奴才有罪，加载失败了 (╥﹏╥)
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('加载图片失败:', error);
                 container.innerHTML = `
                     <div class="error-message">
                         奴才有罪，加载失败了 (╥﹏╥)
                     </div>
                 `;
-                return;
-            }
-
-            // 从所有文件夹获取图片
-            const allImages = [];
-            const folders = Object.keys(imageIndex.folders);
-            folders.forEach(folder => {
-                const images = imageIndex.folders[folder];
-                images.forEach(image => {
-                    allImages.push({
-                        url: `${folder}/${image}`,
-                        folder: folder
-                    });
-                });
-            });
-
-            // 随机打乱图片顺序
-            images = _.shuffle(allImages);
-
-            // 显示第一张图片
-            if (images.length > 0) {
-                showImage(0);
             }
         }
 
+        // 修改图片URL构建函数
+        function buildImageUrl(image) {
+            const cdnList = localStorage.getItem('cdn_list');
+            const cdns = cdnList ? JSON.parse(cdnList) : CDN_CONFIGS.GLOBAL;
+            const cdn = cdns[Math.floor(Math.random() * cdns.length)];
+
+            // 根据图片所属仓库构建URL
+            const repo = GITHUB_REPOS.find(r => r.repo === image.repo) || GITHUB_REPOS[0];
+            return `${cdn}/${repo.owner}/${repo.repo}@${repo.branch}/${image.url}`;
+        }
+
+        // 修改显示图片函数
         function showImage(index) {
             if (index < 0 || index >= images.length) return;
 
             currentIndex = index;
             const image = images[currentIndex];
+            const imageUrl = buildImageUrl(image);
 
             const container = document.getElementById('image-container');
             container.innerHTML = `
                 <div class="image-card">
-                    <img src="${image.url}" alt="Image ${currentIndex + 1}" onload="handleImageLoad(this)">
+                    <img src="${imageUrl}" alt="Image ${currentIndex + 1}" onload="handleImageLoad(this)">
                 </div>
             `;
 
             updateSwipeHint();
 
-            // 等待图片加载完成后再决定是否添加热区
-            const img = container.querySelector('img');
-            img.onload = () => {
-                const card = container.querySelector('.image-card');
-                // 只在非长图模式下添加热区
-                if (!card.classList.contains('scrollable')) {
-                    container.innerHTML += '<div class="swipe-zone"></div>';
-                    const swipeZone = container.querySelector('.swipe-zone');
-                    if (swipeZone) {
-                        swipeZone.addEventListener('touchstart', handleStart);
-                        swipeZone.addEventListener('touchmove', handleMove);
-                        swipeZone.addEventListener('touchend', handleEnd);
-                        swipeZone.addEventListener('mousedown', handleMouseStart);
-                        swipeZone.addEventListener('mousemove', handleMouseMove);
-                        swipeZone.addEventListener('mouseup', handleMouseEnd);
-                        swipeZone.addEventListener('mouseleave', handleMouseEnd);
-                    }
-                }
-            };
+            // 预加载下一张图片
+            if (currentIndex < images.length - 1) {
+                const nextImage = images[currentIndex + 1];
+                const nextImageUrl = buildImageUrl(nextImage);
+                const preloadImg = new Image();
+                preloadImg.src = nextImageUrl;
+            }
         }
 
         // 修改 handleImageLoad 函数

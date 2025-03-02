@@ -1105,55 +1105,80 @@
             return url;
         }
 
-        // 修改 CDN 配置和 GitHub API 相关代码
-        const GITHUB_API = {
-            owner: 'psterman',
-            repo: 'jiandan',
-            branch: 'main'
-        };
+        // 修改仓库配置
+        const GITHUB_REPOS = [
+            {
+                owner: 'psterman',
+                repo: 'dlqpy',
+                branch: 'main',
+                folders: ['pic', 'pic2', 'pic3', 'pic4']  // dlqpy 的图片文件夹
+            },
+            {
+                owner: 'psterman',
+                repo: 'jiandan',
+                branch: 'main',
+                folders: ['001', '002', '003', '20250226', '20250227', '20250228', '20250301']  // jiandan 的图片文件夹
+            }
+        ];
 
-
-
-        // 添加获取最新图片的函数
+        // 优化获取最新图片的函数
         async function fetchLatestImages() {
             try {
                 const allImages = [];
 
-                // 从两个仓库获取图片
                 for (const repo of GITHUB_REPOS) {
                     try {
-                        // 获取仓库内容
-                        const response = await fetch(`https://api.github.com/repos/${repo.owner}/${repo.repo}/contents?ref=${repo.branch}`);
-                        const data = await response.json();
+                        // 直接获取指定文件夹的内容
+                        for (const folder of repo.folders) {
+                            try {
+                                const folderResponse = await fetch(
+                                    `https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/${folder}?ref=${repo.branch}`
+                                );
 
-                        // 获取所有图片文件夹
-                        const imageFolders = data
-                            .filter(item => item.type === 'dir' && (item.name.startsWith('pic') || /^\d+/.test(item.name)))
-                            .sort((a, b) => b.name.localeCompare(a.name));
+                                if (!folderResponse.ok) {
+                                    console.warn(`文件夹 ${folder} 在 ${repo.repo} 中不存在或无法访问`);
+                                    continue;
+                                }
 
-                        // 获取最新的3个文件夹的内容
-                        const recentFolders = imageFolders.slice(0, 3);
+                                const folderData = await folderResponse.json();
 
-                        for (const folder of recentFolders) {
-                            const folderResponse = await fetch(`https://api.github.com/repos/${repo.owner}/${repo.repo}/contents/${folder.name}?ref=${repo.branch}`);
-                            const folderData = await folderResponse.json();
+                                // 过滤并处理图片文件
+                                const images = folderData
+                                    .filter(file =>
+                                        file.type === 'file' &&
+                                        /\.(jpg|jpeg|png|gif)$/i.test(file.name) &&
+                                        file.size < 5 * 1024 * 1024  // 限制图片大小在5MB以内
+                                    )
+                                    .map(file => ({
+                                        url: `${folder}/${file.name}`,
+                                        folder: folder,
+                                        timestamp: Date.now(),
+                                        repo: repo.repo,
+                                        size: file.size,
+                                        sha: file.sha,
+                                        cdn_urls: [
+                                            `https://cdn.jsdelivr.net/gh/${repo.owner}/${repo.repo}@${repo.branch}/${folder}/${file.name}`,
+                                            `https://gcore.jsdelivr.net/gh/${repo.owner}/${repo.repo}@${repo.branch}/${folder}/${file.name}`,
+                                            `https://fastly.jsdelivr.net/gh/${repo.owner}/${repo.repo}@${repo.branch}/${folder}/${file.name}`
+                                        ]
+                                    }));
 
-                            const images = folderData
-                                .filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file.name))
-                                .map(file => ({
-                                    url: `${folder.name}/${file.name}`,
-                                    folder: folder.name,
-                                    timestamp: new Date(file.commit?.committer?.date || Date.now()).getTime(),
-                                    repo: repo.repo // 添加仓库标识
-                                }));
-
-                            allImages.push(...images);
+                                if (images.length > 0) {
+                                    console.log(`在 ${repo.repo}/${folder} 中找到 ${images.length} 张图片`);
+                                    allImages.push(...images);
+                                }
+                            } catch (folderError) {
+                                console.error(`获取文件夹 ${folder} 内容失败:`, folderError);
+                                continue;
+                            }
                         }
-                    } catch (error) {
-                        console.error(`获取 ${repo.repo} 仓库图片失败:`, error);
+                    } catch (repoError) {
+                        console.error(`获取 ${repo.repo} 仓库内容失败:`, repoError);
+                        continue;
                     }
                 }
 
+                console.log(`总共找到 ${allImages.length} 张图片`);
                 return allImages;
             } catch (error) {
                 console.error('获取图片失败:', error);
@@ -1161,10 +1186,58 @@
             }
         }
 
-        // 修改加载图片的函数
+        // 优化图片URL构建函数
+        function buildImageUrl(image) {
+            // 随机选择一个CDN URL
+            if (image.cdn_urls && image.cdn_urls.length > 0) {
+                return image.cdn_urls[Math.floor(Math.random() * image.cdn_urls.length)];
+            }
+
+            // 如果没有预设的CDN URL，构建一个
+            const cdn = CDN_CONFIGS.GLOBAL[Math.floor(Math.random() * CDN_CONFIGS.GLOBAL.length)];
+            const repo = GITHUB_REPOS.find(r => r.repo === image.repo) || GITHUB_REPOS[0];
+            return `${cdn}/${repo.owner}/${repo.repo}@${repo.branch}/${image.url}`;
+        }
+
+        // 修改加载图片函数中的错误处理
+        function handleImageError(img) {
+            const card = img.closest('.image-card');
+            if (card) {
+                // 尝试使用其他CDN URL
+                const currentImage = images[currentIndex];
+                if (currentImage.cdn_urls && currentImage.cdn_urls.length > 0) {
+                    // 移除已失败的CDN URL
+                    const failedUrl = img.src;
+                    currentImage.cdn_urls = currentImage.cdn_urls.filter(url => url !== failedUrl);
+
+                    if (currentImage.cdn_urls.length > 0) {
+                        // 尝试下一个CDN URL
+                        img.src = currentImage.cdn_urls[0];
+                        return;
+                    }
+                }
+
+                // 如果所有CDN都失败，显示错误信息
+                card.innerHTML = `
+                    <div class="error-message">
+                        <p>这张图片加载失败了 (╥﹏╥)</p>
+                        <button onclick="nextImage()" class="retry-button">下一张</button>
+                    </div>
+                `;
+            }
+        }
+
+        // 添加图片加载状态提示
+        function updateLoadingProgress(current, total) {
+            const progress = document.querySelector('.loading-progress');
+            if (progress) {
+                progress.textContent = `正在搜寻御览之物... (${current}/${total})`;
+            }
+        }
+
+        // 修改加载图片函数中的相关部分
         async function loadImages() {
             const container = document.getElementById('image-container');
-            // 显示加载提示
             container.innerHTML = `
                 <div class="loading-overlay">
                     <div class="loading-text">${loadingTexts[Math.floor(Math.random() * loadingTexts.length)]}</div>
@@ -1173,46 +1246,26 @@
             `;
 
             try {
-                // 优先从本地缓存加载
-                let images = [];
-                const cachedImages = localStorage.getItem('cached_images');
-                if (cachedImages) {
-                    images = JSON.parse(cachedImages);
-                    // 立即显示缓存的图片
-                    if (images.length > 0) {
-                        showImage(0);
-                    }
-                }
-
                 // 获取最新图片
                 const latestImages = await fetchLatestImages();
-                console.log('获取到的最新图片数量:', latestImages.length);
 
                 if (latestImages.length > 0) {
-                    // 合并新旧图片，去重
-                    const allImages = [...latestImages];
-                    if (images.length > 0) {
-                        const existingUrls = new Set(images.map(img => `${img.repo}-${img.url}`));
-                        const newImages = latestImages.filter(img => !existingUrls.has(`${img.repo}-${img.url}`));
-                        allImages.push(...images);
-                    }
-                    
-                    // 按时间戳排序并随机打乱最新的图片
-                    images = allImages
-                        .sort((a, b) => b.timestamp - a.timestamp)
-                        .slice(0, 100); // 限制总数量
-                    images = _.shuffle(images);
+                    // 随机打乱并限制数量
+                    const shuffledImages = _.shuffle(latestImages).slice(0, 200);
+
+                    // 更新全局图片数组
+                    window.images = shuffledImages;
 
                     // 缓存到本地
-                    localStorage.setItem('cached_images', JSON.stringify(images));
-                    
+                    localStorage.setItem('cached_images', JSON.stringify(shuffledImages));
+
                     // 显示第一张图片
                     showImage(0);
-                } else if (images.length === 0) {
+                } else {
                     container.innerHTML = `
                         <div class="error-message">
-                            <p>臣有罪，加载失败了 (╥﹏╥)</p>
-                            <button onclick="retryLoading()" class="retry-button">重新尝试</button>
+                            <p>臣有罪，未能找到合适的图片 (╥﹏╥)</p>
+                            <button onclick="retryLoading()" class="retry-button">重新搜寻</button>
                         </div>
                     `;
                 }
@@ -1256,26 +1309,13 @@
             `;
 
             updateSwipeHint();
-            
+
             // 预加载下一张图片
             if (currentIndex < images.length - 1) {
                 const nextImage = images[currentIndex + 1];
                 const nextImageUrl = buildImageUrl(nextImage);
                 const preloadImg = new Image();
                 preloadImg.src = nextImageUrl;
-            }
-        }
-
-        // 添加图片加载错误处理
-        function handleImageError(img) {
-            const card = img.closest('.image-card');
-            if (card) {
-                card.innerHTML = `
-                    <div class="error-message">
-                        <p>这张图片加载失败了 (╥﹏╥)</p>
-                        <button onclick="nextImage()" class="retry-button">下一张</button>
-                    </div>
-                `;
             }
         }
 
